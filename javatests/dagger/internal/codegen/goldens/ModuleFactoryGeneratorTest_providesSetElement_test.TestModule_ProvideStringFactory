@@ -18,7 +18,9 @@ import javax.annotation.processing.Generated;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 public final class TestModule_ProvideStringFactory implements Factory<String> {
   private final TestModule module;

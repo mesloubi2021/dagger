@@ -16,6 +16,7 @@
 
 package dagger.producers.internal;
 
+import static dagger.internal.Providers.asDaggerProvider;
 import static dagger.producers.internal.Producers.entryPointViewOf;
 import static dagger.producers.internal.Producers.nonCancellationPropagatingViewOf;
 
@@ -24,9 +25,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import dagger.internal.Provider;
 import dagger.producers.Producer;
 import java.util.Map;
-import javax.inject.Provider;
 
 /**
  * A {@link Producer} implementation used to implement {@link Map} bindings. This factory returns an
@@ -63,6 +64,15 @@ public final class MapOfProducerProducer<K, V> extends AbstractMapProducer<K, V,
     public Builder<K, V> put(K key, Provider<V> providerOfValue) {
       super.put(key, providerOfValue);
       return this;
+    }
+
+    /**
+     * Legacy javax version of the method to support libraries compiled with an older version of
+     * Dagger. Do not use directly.
+     */
+    @Deprecated
+    public Builder<K, V> put(K key, javax.inject.Provider<V> providerOfValue) {
+      return put(key, asDaggerProvider(providerOfValue));
     }
 
     @Override

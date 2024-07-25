@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableMap;
 import static dagger.internal.codegen.extension.DaggerStreams.valuesOf;
 import static dagger.internal.codegen.xprocessing.XTypes.isDeclared;
+import static dagger.internal.codegen.xprocessing.XTypes.isTypeOf;
 
 import androidx.room.compiler.processing.XType;
 import androidx.room.compiler.processing.XTypeElement;
@@ -154,5 +155,15 @@ public abstract class OptionalType {
    */
   public static OptionalType from(Key key) {
     return from(key.type().xprocessing());
+  }
+
+  public static boolean isOptionalProviderType(XType type) {
+    if (OptionalType.isOptional(type)) {
+      OptionalType optionalType = OptionalType.from(type);
+      if (isTypeOf(optionalType.valueType(), TypeNames.PROVIDER)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

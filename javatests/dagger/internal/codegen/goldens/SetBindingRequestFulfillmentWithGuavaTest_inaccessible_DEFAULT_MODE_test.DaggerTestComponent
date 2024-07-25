@@ -17,7 +17,9 @@ import other.UsesInaccessible_Factory;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {

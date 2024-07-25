@@ -16,6 +16,7 @@
 
 package dagger.hilt.processor.internal.root;
 
+import androidx.room.compiler.processing.XAnnotation;
 import androidx.room.compiler.processing.XElement;
 import androidx.room.compiler.processing.XProcessingEnv;
 import androidx.room.compiler.processing.XTypeElement;
@@ -25,6 +26,8 @@ import dagger.hilt.processor.internal.ClassNames;
 import dagger.hilt.processor.internal.ProcessorErrors;
 import dagger.hilt.processor.internal.Processors;
 import dagger.internal.codegen.xprocessing.XElements;
+import java.util.Optional;
+import java.util.Set;
 import javax.lang.model.element.TypeElement;
 
 /** Metadata class for {@code InternalTestRoot} annotated classes. */
@@ -55,6 +58,28 @@ abstract class TestRootMetadata {
   /** The name of the generated Hilt test application class for the given test name. */
   ClassName testInjectorName() {
     return Processors.append(Processors.getEnclosedClassName(testName()), "_GeneratedInjector");
+  }
+
+  /**
+   * Returns either the SkipTestInjection annotation or the first annotation that was annotated
+   * with SkipTestInjection, if present.
+   */
+  Optional<XAnnotation> skipTestInjectionAnnotation() {
+    XAnnotation skipTestAnnotation = testElement().getAnnotation(ClassNames.SKIP_TEST_INJECTION);
+    if (skipTestAnnotation != null) {
+      return Optional.of(skipTestAnnotation);
+    }
+
+    Set<XAnnotation> annotatedAnnotations = testElement().getAnnotationsAnnotatedWith(
+        ClassNames.SKIP_TEST_INJECTION);
+    if (!annotatedAnnotations.isEmpty()) {
+      // Just return the first annotation that skips test injection if there are multiple since
+      // at this point it doesn't really matter and the specific annotation is only really useful
+      // for communicating back to the user.
+      return Optional.of(annotatedAnnotations.iterator().next());
+    }
+
+    return Optional.empty();
   }
 
   static TestRootMetadata of(XProcessingEnv env, XElement element) {

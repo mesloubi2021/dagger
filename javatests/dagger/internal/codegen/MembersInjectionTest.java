@@ -46,6 +46,88 @@ public class MembersInjectionTest {
   }
 
   @Test
+  public void injectKotlinProtectField_fails() {
+    Source injectFieldSrc =
+        CompilerTests.kotlinSource(
+            "MyClass.kt",
+            "package test",
+            "",
+            "import javax.inject.Inject",
+            "",
+            "class MyClass @Inject constructor() {",
+            "  @Inject protected lateinit var protectedField: String",
+            "}");
+    Source moduleSrc =
+        CompilerTests.kotlinSource(
+            "MyModule.kt",
+            "package test",
+            "",
+            "import dagger.Module",
+            "import dagger.Provides",
+            "",
+            "@Module",
+            "object MyModule {",
+            "  @Provides",
+            "  fun providesString() = \"hello\"",
+            "}");
+    Source componentSrc =
+        CompilerTests.kotlinSource(
+            "MyComponent.kt",
+            "package test",
+            "",
+            "import dagger.Component",
+            "@Component(modules = [MyModule::class])",
+            "interface MyComponent {}");
+    CompilerTests.daggerCompiler(injectFieldSrc, moduleSrc, componentSrc)
+        .withProcessingOptions(compilerMode.processorOptions())
+        .compile(
+            subject -> {
+              subject.hasErrorCount(1);
+              subject.hasErrorContaining(
+                  "Dagger injector does not have access to kotlin protected fields");
+            });
+  }
+
+  @Test
+  public void injectJavaProtectField_succeeds() {
+    Source injectFieldSrc =
+        CompilerTests.javaSource(
+            "test.MyClass",
+            "package test;",
+            "",
+            "import javax.inject.Inject;",
+            "",
+            "public final class MyClass {",
+            "  @Inject MyClass() {}",
+            "  @Inject protected String protectedField;",
+            "}");
+    Source moduleSrc =
+        CompilerTests.kotlinSource(
+            "MyModule.kt",
+            "package test",
+            "",
+            "import dagger.Module",
+            "import dagger.Provides",
+            "",
+            "@Module",
+            "object MyModule {",
+            "  @Provides",
+            "  fun providesString() = \"hello\"",
+            "}");
+    Source componentSrc =
+        CompilerTests.kotlinSource(
+            "MyComponent.kt",
+            "package test",
+            "",
+            "import dagger.Component",
+            "@Component(modules = [MyModule::class])",
+            "interface MyComponent {}");
+    CompilerTests.daggerCompiler(injectFieldSrc, moduleSrc, componentSrc)
+        .withProcessingOptions(compilerMode.processorOptions())
+        .compile(subject -> subject.hasErrorCount(0));
+  }
+
+  @Test
   public void parentClass_noInjectedMembers() throws Exception {
     Source childFile =
         CompilerTests.javaSource(
@@ -159,7 +241,8 @@ public class MembersInjectionTest {
         .compile(
             subject -> {
               subject.hasErrorCount(0);
-              subject.generatedSource(goldenFileRule.goldenSource("test/GenericClass_MembersInjector"));
+              subject.generatedSource(
+                  goldenFileRule.goldenSource("test/GenericClass_MembersInjector"));
             });
   }
 

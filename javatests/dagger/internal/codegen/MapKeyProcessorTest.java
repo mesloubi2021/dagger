@@ -137,4 +137,67 @@ public class MapKeyProcessorTest {
         .and()
         .generatesSources(generatedKeyCreator);
   }
+
+  @Test
+  public void nestedComplexMapKey_buildSuccessfully() {
+    JavaFileObject outerKey =
+        JavaFileObjects.forSourceLines(
+            "test.OuterKey",
+            "package test;",
+            "import dagger.MapKey;",
+            "import java.lang.annotation.Retention;",
+            "import static java.lang.annotation.RetentionPolicy.RUNTIME;",
+            "",
+            "@MapKey(unwrapValue = false)",
+            "public @interface OuterKey {",
+            "  String value() default \"hello\";",
+            "  NestedKey[] nestedKeys() default {};",
+            "}");
+    JavaFileObject nestedKey =
+        JavaFileObjects.forSourceLines(
+            "test.NestedKey",
+            "package test;",
+            "import dagger.MapKey;",
+            "import java.lang.annotation.Retention;",
+            "import static java.lang.annotation.RetentionPolicy.RUNTIME;",
+            "",
+            "@MapKey(unwrapValue = false)",
+            "public @interface NestedKey {",
+            " String value() default \"hello\";",
+            " String otherValue() default \"world\";",
+            "}");
+    JavaFileObject foo =
+        JavaFileObjects.forSourceLines(
+            "test.FooModule",
+            "package test;",
+            "",
+            "import dagger.multibindings.IntoMap;",
+            "import dagger.Module;",
+            "import dagger.Provides;",
+            "",
+            "@Module",
+            "public final class FooModule {",
+            "  @IntoMap",
+            "  @OuterKey(nestedKeys = @NestedKey)",
+            "  @Provides",
+            "  String provideString() { return \"hello\";}",
+            "}");
+    JavaFileObject component =
+        JavaFileObjects.forSourceLines(
+            "test.MyComponent",
+            "package test;",
+            "",
+            "import dagger.Component;",
+            "import java.util.Map;",
+            "",
+            "@Component(modules = FooModule.class)",
+            "public interface MyComponent {",
+            "  Map<OuterKey, String> getFoo();",
+            "}");
+    assertAbout(javaSources())
+        .that(ImmutableList.of(outerKey, nestedKey, foo, component))
+        .withCompilerOptions(compilerMode.javacopts())
+        .processedWith(new ComponentProcessor(), new AutoAnnotationProcessor())
+        .compilesWithoutError();
+  }
 }

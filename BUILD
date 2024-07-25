@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library")
-load("@google_bazel_common//tools/javadoc:javadoc.bzl", "javadoc_library")
-load("@google_bazel_common//tools/jarjar:jarjar.bzl", "jarjar_library")
 load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "define_kt_toolchain")
+load("@rules_java//java:defs.bzl", "java_library")
+load("//tools/jarjar:jarjar.bzl", "jarjar_library")
+load("//tools/javadoc:javadoc.bzl", "javadoc_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -72,17 +72,6 @@ android_library(
     exports = [
         ":android",
         "//java/dagger/android/support",
-    ],
-)
-
-jarjar_library(
-    name = "shaded_android_processor",
-    jars = [
-        "//java/dagger/android/processor",
-        "//third_party/java/auto:common",
-    ],
-    rules = [
-        "rule com.google.auto.common.** dagger.android.shaded.auto.common.@1",
     ],
 )
 

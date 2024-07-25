@@ -2,9 +2,9 @@ package test;
 
 import com.google.common.collect.ImmutableMap;
 import dagger.internal.DaggerGenerated;
+import dagger.internal.Provider;
 import java.util.Map;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -15,7 +15,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -69,8 +71,8 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Map<Long, Provider<Long>> providerLongs() {
-      return ImmutableMap.<Long, Provider<Long>>builderWithExpectedSize(6).put(0L, testComponentImpl.provideLong0Provider).put(1L, testComponentImpl.provideLong1Provider).put(2L, testComponentImpl.provideLong2Provider).put(3L, provideLong3Provider).put(4L, provideLong4Provider).put(5L, provideLong5Provider).build();
+    public Map<Long, javax.inject.Provider<Long>> providerLongs() {
+      return ImmutableMap.<Long, javax.inject.Provider<Long>>builderWithExpectedSize(6).put(0L, testComponentImpl.provideLong0Provider).put(1L, testComponentImpl.provideLong1Provider).put(2L, testComponentImpl.provideLong2Provider).put(3L, provideLong3Provider).put(4L, provideLong4Provider).put(5L, provideLong5Provider).build();
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -136,8 +138,8 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Map<String, Provider<String>> providerStrings() {
-      return ImmutableMap.<String, Provider<String>>of();
+    public Map<String, javax.inject.Provider<String>> providerStrings() {
+      return ImmutableMap.<String, javax.inject.Provider<String>>of();
     }
 
     @Override
@@ -146,8 +148,8 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Map<Integer, Provider<Integer>> providerInts() {
-      return ImmutableMap.<Integer, Provider<Integer>>of(0, provideIntProvider);
+    public Map<Integer, javax.inject.Provider<Integer>> providerInts() {
+      return ImmutableMap.<Integer, javax.inject.Provider<Integer>>of(0, provideIntProvider);
     }
 
     @Override
@@ -156,8 +158,8 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Map<Long, Provider<Long>> providerLongs() {
-      return ImmutableMap.<Long, Provider<Long>>of(0L, provideLong0Provider, 1L, provideLong1Provider, 2L, provideLong2Provider);
+    public Map<Long, javax.inject.Provider<Long>> providerLongs() {
+      return ImmutableMap.<Long, javax.inject.Provider<Long>>of(0L, provideLong0Provider, 1L, provideLong1Provider, 2L, provideLong2Provider);
     }
 
     @Override

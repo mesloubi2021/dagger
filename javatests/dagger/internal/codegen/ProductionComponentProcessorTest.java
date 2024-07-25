@@ -16,6 +16,7 @@
 
 package dagger.internal.codegen;
 
+
 import androidx.room.compiler.processing.util.Source;
 import com.google.common.collect.ImmutableMap;
 import dagger.testing.compile.CompilerTests;
@@ -202,6 +203,51 @@ public class ProductionComponentProcessorTest {
   }
 
   @Test
+  public void dependsOnProductionSubcomponentWithPluginsVisitFullBindingGraphs() throws Exception {
+    Source myComponent =
+        CompilerTests.javaSource(
+            "test.MyComponent",
+            "package test;",
+            "",
+            "import dagger.Component;",
+            "",
+            "@Component(modules = MyModule.class)",
+            "interface MyComponent {}");
+    Source myModule =
+        CompilerTests.javaSource(
+            "test.MyModule",
+            "package test;",
+            "",
+            "import dagger.Component;",
+            "import dagger.Module;",
+            "",
+            "@Module(subcomponents = MyProductionSubcomponent.class)",
+            "interface MyModule {}");
+    Source myProductionSubcomponent =
+        CompilerTests.javaSource(
+            "test.MyProductionSubcomponent",
+            "package test;",
+            "",
+            "import dagger.producers.ProductionSubcomponent;",
+            "",
+            "@ProductionSubcomponent",
+            "interface MyProductionSubcomponent {",
+            "  @ProductionSubcomponent.Builder",
+            "  interface Builder {",
+            "    MyProductionSubcomponent build();",
+            "  }",
+            "}");
+
+    CompilerTests.daggerCompiler(myComponent, myModule, myProductionSubcomponent)
+        .withProcessingOptions(
+            ImmutableMap.<String, String>builder()
+                .putAll(compilerMode.processorOptions())
+                .put("dagger.pluginsVisitFullBindingGraphs", "ENABLED")
+                .buildOrThrow())
+        .compile(subject -> subject.hasErrorCount(0));
+  }
+
+  @Test
   public void simpleComponent() throws Exception {
     Source component =
         CompilerTests.javaSource(
@@ -368,6 +414,71 @@ public class ProductionComponentProcessorTest {
             subject -> {
               subject.hasErrorCount(0);
               subject.generatedSource(goldenFileRule.goldenSource("test/DaggerParent"));
+            });
+  }
+
+  @Test
+  public void requestProducerNodeWithProvider_failsWithNotSupportedError() {
+    Source moduleFile =
+        CompilerTests.javaSource(
+            "test.ExecutorModule",
+            "package test;",
+            "",
+            "import com.google.common.util.concurrent.MoreExecutors;",
+            "import dagger.Module;",
+            "import dagger.Provides;",
+            "import dagger.producers.Production;",
+            "import java.util.concurrent.Executor;",
+            "",
+            "@Module",
+            "final class ExecutorModule {",
+            "  @Provides @Production Executor executor() {",
+            "    return MoreExecutors.directExecutor();",
+            "  }",
+            "}");
+    Source producerModuleFile =
+        CompilerTests.javaSource(
+            "test.SimpleModule",
+            "package test;",
+            "",
+            "import dagger.producers.ProducerModule;",
+            "import dagger.producers.Produces;",
+            "import javax.inject.Provider;",
+            "import java.util.concurrent.Executor;",
+            "import dagger.producers.Production;",
+            "",
+            "@ProducerModule",
+            "final class SimpleModule {",
+            "  @Produces String str(Provider<Integer> num) {",
+            "    return \"\";",
+            "  }",
+            "  @Produces Integer num() { return 1; }",
+            "}");
+    Source componentFile =
+        CompilerTests.javaSource(
+            "test.SimpleComponent",
+            "package test;",
+            "",
+            "import com.google.common.util.concurrent.ListenableFuture;",
+            "import dagger.producers.ProductionComponent;",
+            "",
+            "@ProductionComponent(modules = {ExecutorModule.class, SimpleModule.class})",
+            "interface SimpleComponent {",
+            "  ListenableFuture<String> str();",
+            "",
+            "  @ProductionComponent.Builder",
+            "  interface Builder {",
+            "    SimpleComponent build();",
+            "  }",
+            "}");
+
+    CompilerTests.daggerCompiler(moduleFile, producerModuleFile, componentFile)
+        .withProcessingOptions(compilerMode.processorOptions())
+        .compile(
+            subject -> {
+              subject.hasErrorCount(1);
+              subject.hasErrorContaining(
+                  "request kind PROVIDER cannot be satisfied by production binding");
             });
   }
 }

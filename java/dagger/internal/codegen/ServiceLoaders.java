@@ -30,8 +30,6 @@ final class ServiceLoaders {
 
   /**
    * Returns the loaded services for the given class.
-   *
-   * <p>Note: This should only be called in Javac. This method will throw if called in KSP.
    */
   static <T> ImmutableSet<T> loadServices(XProcessingEnv processingEnv, Class<T> clazz) {
     return ImmutableSet.copyOf(ServiceLoader.load(clazz, classLoaderFor(processingEnv, clazz)));

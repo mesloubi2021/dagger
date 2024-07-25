@@ -15,9 +15,9 @@
 # Description:
 #   Dagger Lint Rules
 
-load("//:build_defs.bzl", "POM_VERSION")
-load("//tools:maven.bzl", "gen_maven_artifact")
 load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_library")
+load("//:build_defs.bzl", "POM_VERSION")
+load("//tools/maven:maven.bzl", "gen_maven_artifact")
 
 package(default_visibility = ["//:src"])
 

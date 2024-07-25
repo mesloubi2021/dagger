@@ -78,7 +78,8 @@ public final class ViewGenerator {
     Generators.addInjectionMethods(metadata, builder);
 
     metadata.baseElement().getConstructors().stream()
-        .filter(this::isConstructorVisibleToGeneratedClass)
+        .filter(constructor -> Generators.isConstructorVisibleToSubclass(
+            constructor, metadata.element()))
         .map(this::constructorMethod)
         .forEach(builder::addMethod);
 
@@ -86,17 +87,6 @@ public final class ViewGenerator {
         .write(
             JavaFile.builder(generatedClassName.packageName(), builder.build()).build(),
             XFiler.Mode.Isolating);
-  }
-
-  private boolean isConstructorVisibleToGeneratedClass(XConstructorElement constructor) {
-    if (Processors.hasJavaPackagePrivateVisibility(constructor) && !isInOurPackage(constructor)) {
-      return false;
-    } else if (constructor.isPrivate()) {
-      return false;
-    }
-
-    // We extend the base class, so both protected and public methods are always accessible.
-    return true;
   }
 
   /**
@@ -108,7 +98,9 @@ public final class ViewGenerator {
    * <pre>
    *   Hilt_$CLASS(Context context, ...) {
    *     super(context, ...);
-   *     inject();
+   *     if (!isInEditMode()) {
+   *       inject();
+   *     }
    *   }
    * </pre>
    */
@@ -126,7 +118,9 @@ public final class ViewGenerator {
           AnnotationSpec.builder(AndroidClassNames.TARGET_API).addMember("value", "21").build());
     }
 
-    builder.addStatement("inject()");
+    builder.beginControlFlow("if(!isInEditMode())")
+        .addStatement("inject()")
+        .endControlFlow();
 
     return builder.build();
   }
@@ -184,12 +178,5 @@ public final class ViewGenerator {
   private static boolean isFirstRestrictedParameter(XType type) {
     return isDeclared(type)
         && Processors.isAssignableFrom(type.getTypeElement(), AndroidClassNames.CONTEXT);
-  }
-
-  private boolean isInOurPackage(XConstructorElement constructor) {
-    return constructor
-        .getEnclosingElement()
-        .getPackageName()
-        .contentEquals(metadata.element().getPackageName());
   }
 }

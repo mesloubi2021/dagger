@@ -85,6 +85,20 @@ java_library(
 )
 
 java_library(
+    name = "method_signature",
+    srcs = [
+        "MethodSignature.java",
+    ],
+    deps = [
+        "//java/dagger/internal/codegen/extension",
+        "//java/dagger/internal/codegen/xprocessing",
+        "//third_party/java/auto:value",
+        "//third_party/java/guava/collect",
+        "//third_party/java/javapoet",
+    ],
+)
+
+java_library(
     name = "classnames",
     srcs = [
         "ClassNames.java",

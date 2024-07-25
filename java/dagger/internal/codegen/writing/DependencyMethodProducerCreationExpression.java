@@ -33,8 +33,8 @@ import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.BindingGraph;
+import dagger.internal.codegen.binding.ComponentDependencyProductionBinding;
 import dagger.internal.codegen.binding.ComponentRequirement;
-import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.writing.FrameworkFieldInitializer.FrameworkInstanceCreationExpression;
 
 /**
@@ -45,14 +45,14 @@ import dagger.internal.codegen.writing.FrameworkFieldInitializer.FrameworkInstan
 // TODO(dpb): Resolve with DependencyMethodProviderCreationExpression.
 final class DependencyMethodProducerCreationExpression
     implements FrameworkInstanceCreationExpression {
-  private final ContributionBinding binding;
+  private final ComponentDependencyProductionBinding binding;
   private final ComponentImplementation componentImplementation;
   private final ComponentRequirementExpressions componentRequirementExpressions;
   private final BindingGraph graph;
 
   @AssistedInject
   DependencyMethodProducerCreationExpression(
-      @Assisted ContributionBinding binding,
+      @Assisted ComponentDependencyProductionBinding binding,
       ComponentImplementation componentImplementation,
       ComponentRequirementExpressions componentRequirementExpressions,
       BindingGraph graph) {
@@ -104,6 +104,6 @@ final class DependencyMethodProducerCreationExpression
 
   @AssistedFactory
   static interface Factory {
-    DependencyMethodProducerCreationExpression create(ContributionBinding binding);
+    DependencyMethodProducerCreationExpression create(ComponentDependencyProductionBinding binding);
   }
 }

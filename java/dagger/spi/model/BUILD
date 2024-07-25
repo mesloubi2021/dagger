@@ -40,7 +40,6 @@ kt_jvm_library(
     deps = [
         "//java/dagger:core",
         "//java/dagger/internal/codegen/extension",
-        "//java/dagger/producers",
         "//third_party/java/auto:common",
         "//third_party/java/auto:value",
         "//third_party/java/error_prone:annotations",
@@ -48,7 +47,6 @@ kt_jvm_library(
         "//third_party/java/guava/collect",
         "//third_party/java/guava/graph",
         "//third_party/java/javapoet",
-        "//third_party/java/jsr305_annotations",
         "//third_party/java/jsr330_inject",
         "@maven//:com_google_devtools_ksp_symbol_processing_api",
     ],

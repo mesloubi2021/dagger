@@ -36,7 +36,8 @@ import javax.inject.Inject;
  *
  * <p>Elements directly enclosed by a type are preceded by the enclosing type's qualified name.
  *
- * <p>Parameters are given with their enclosing executable, with other parameters elided.
+ * <p>If the element is a parameter, the returned string will include the enclosing executable,
+ * with other parameters elided.
  */
 public final class ElementFormatter extends Formatter<XElement> {
   @Inject
@@ -52,15 +53,29 @@ public final class ElementFormatter extends Formatter<XElement> {
    *
    * <p>Elements directly enclosed by a type are preceded by the enclosing type's qualified name.
    *
-   * <p>Parameters are given with their enclosing executable, with other parameters elided.
+   * <p>If the element is a parameter, the returned string will include the enclosing executable,
+   * with other parameters elided.
    */
   public static String elementToString(XElement element) {
+    return elementToString(element, /* elideMethodParameterTypes= */ false);
+  }
+
+  /**
+   * Returns a useful string form for an element.
+   *
+   * <p>Elements directly enclosed by a type are preceded by the enclosing type's qualified name.
+   *
+   * <p>Parameters are given with their enclosing executable, with other parameters elided.
+   */
+  public static String elementToString(XElement element, boolean elideMethodParameterTypes) {
     if (isExecutable(element)) {
       return enclosingTypeAndMemberName(element)
           .append(
-              asExecutable(element).getParameters().stream()
-                  .map(parameter -> XTypes.toStableString(parameter.getType()))
-                  .collect(joining(", ", "(", ")")))
+              elideMethodParameterTypes
+                  ? (asExecutable(element).getParameters().isEmpty() ? "()" : "(…)")
+                  : asExecutable(element).getParameters().stream()
+                      .map(parameter -> XTypes.toStableString(parameter.getType()))
+                      .collect(joining(", ", "(", ")")))
           .toString();
     } else if (isMethodParameter(element)) {
       XExecutableElement methodOrConstructor = asMethodParameter(element).getEnclosingElement();

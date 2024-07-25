@@ -26,10 +26,9 @@ import dagger.internal.codegen.binding.FrameworkType;
 import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.model.RequestKind;
 import dagger.internal.codegen.writing.FrameworkFieldInitializer.FrameworkInstanceCreationExpression;
-import dagger.producers.Producer;
 import java.util.Optional;
 
-/** An {@link Producer} creation expression for provision bindings. */
+/** An {@code Producer} creation expression for provision bindings. */
 final class ProducerFromProviderCreationExpression implements FrameworkInstanceCreationExpression {
   private final RequestRepresentation providerRequestRepresentation;
   private final ClassName requestingClass;

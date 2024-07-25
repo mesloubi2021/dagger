@@ -145,7 +145,7 @@ public abstract class ComponentRequirement {
    * <p>Alternatively, if the module is a Kotlin Object then the binding methods are considered
    * {@code static}, requiring no module instance.
    */
-  private boolean requiresModuleInstance() {
+  public boolean requiresModuleInstance() {
     if (typeElement().isKotlinObject() || typeElement().isCompanionObject()) {
       return false;
     }
@@ -179,6 +179,10 @@ public abstract class ComponentRequirement {
     return ParameterSpec.builder(type().getTypeName(), variableName()).build();
   }
 
+  public static ComponentRequirement forDependency(ComponentDependencyBinding binding) {
+    return forDependency(binding.key().type().xprocessing());
+  }
+
   public static ComponentRequirement forDependency(XType type) {
     checkArgument(isDeclared(checkNotNull(type)));
     return create(Kind.DEPENDENCY, type);
@@ -189,7 +193,7 @@ public abstract class ComponentRequirement {
     return create(Kind.MODULE, type);
   }
 
-  public static ComponentRequirement forBoundInstance(ContributionBinding binding) {
+  public static ComponentRequirement forBoundInstance(BoundInstanceBinding binding) {
     checkArgument(binding.kind().equals(BindingKind.BOUND_INSTANCE));
     return forBoundInstance(binding.key(), binding.isNullable(), binding.bindingElement().get());
   }

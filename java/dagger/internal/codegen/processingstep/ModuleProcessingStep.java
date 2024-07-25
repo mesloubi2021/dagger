@@ -33,7 +33,6 @@ import dagger.internal.codegen.binding.BindingFactory;
 import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.binding.DelegateDeclaration;
 import dagger.internal.codegen.binding.ProductionBinding;
-import dagger.internal.codegen.binding.ProvisionBinding;
 import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.validation.ModuleValidator;
 import dagger.internal.codegen.validation.ValidationReport;
@@ -51,7 +50,7 @@ final class ModuleProcessingStep extends TypeCheckingProcessingStep<XTypeElement
   private final XMessager messager;
   private final ModuleValidator moduleValidator;
   private final BindingFactory bindingFactory;
-  private final SourceFileGenerator<ProvisionBinding> factoryGenerator;
+  private final SourceFileGenerator<ContributionBinding> factoryGenerator;
   private final SourceFileGenerator<ProductionBinding> producerFactoryGenerator;
   private final SourceFileGenerator<XTypeElement> moduleConstructorProxyGenerator;
   private final InaccessibleMapKeyProxyGenerator inaccessibleMapKeyProxyGenerator;
@@ -63,7 +62,7 @@ final class ModuleProcessingStep extends TypeCheckingProcessingStep<XTypeElement
       XMessager messager,
       ModuleValidator moduleValidator,
       BindingFactory bindingFactory,
-      SourceFileGenerator<ProvisionBinding> factoryGenerator,
+      SourceFileGenerator<ContributionBinding> factoryGenerator,
       SourceFileGenerator<ProductionBinding> producerFactoryGenerator,
       @ModuleGenerator SourceFileGenerator<XTypeElement> moduleConstructorProxyGenerator,
       InaccessibleMapKeyProxyGenerator inaccessibleMapKeyProxyGenerator,

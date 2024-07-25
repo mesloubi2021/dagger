@@ -48,9 +48,14 @@ import javax.tools.Diagnostic.Kind
 class ViewModelValidationPlugin : BindingGraphPlugin {
 
   private lateinit var env: XProcessingEnv
+  private lateinit var daggerProcessingEnv: DaggerProcessingEnv
 
   override fun init(processingEnv: DaggerProcessingEnv, options: MutableMap<String, String>) {
-    env = processingEnv.toXProcessingEnv()
+    daggerProcessingEnv = processingEnv
+  }
+
+  override fun onProcessingRoundBegin() {
+    env = daggerProcessingEnv.toXProcessingEnv()
   }
 
   override fun visitGraph(bindingGraph: BindingGraph, diagnosticReporter: DiagnosticReporter) {
@@ -75,7 +80,7 @@ class ViewModelValidationPlugin : BindingGraphPlugin {
           "\nInjection of an @HiltViewModel class is prohibited since it does not create a " +
             "ViewModel instance correctly.\nAccess the ViewModel via the Android APIs " +
             "(e.g. ViewModelProvider) instead." +
-            "\nInjected ViewModel: ${target.key().type()}\n"
+            "\nInjected ViewModel: ${target.key().type()}\n",
         )
       } else if (
         isViewModelAssistedFactory(target) && !isInternalViewModelAssistedFactoryUsage(source)
@@ -86,7 +91,7 @@ class ViewModelValidationPlugin : BindingGraphPlugin {
           "\nInjection of an assisted factory for Hilt ViewModel is prohibited since it " +
             "can not be used to create a ViewModel instance correctly.\nAccess the ViewModel via " +
             "the Android APIs (e.g. ViewModelProvider) instead." +
-            "\nInjected factory: ${target.key().type()}\n"
+            "\nInjected factory: ${target.key().type()}\n",
         )
       }
     }

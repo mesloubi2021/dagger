@@ -16,9 +16,17 @@
 
 package dagger.internal.codegen.writing;
 
-import dagger.internal.codegen.binding.ComponentRequirement;
+import dagger.internal.codegen.binding.AssistedFactoryBinding;
+import dagger.internal.codegen.binding.BoundInstanceBinding;
+import dagger.internal.codegen.binding.ComponentBinding;
+import dagger.internal.codegen.binding.ComponentDependencyBinding;
+import dagger.internal.codegen.binding.ComponentDependencyProvisionBinding;
 import dagger.internal.codegen.binding.ContributionBinding;
-import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.binding.DelegateBinding;
+import dagger.internal.codegen.binding.MultiboundMapBinding;
+import dagger.internal.codegen.binding.MultiboundSetBinding;
+import dagger.internal.codegen.binding.OptionalBinding;
+import dagger.internal.codegen.binding.SubcomponentCreatorBinding;
 import dagger.internal.codegen.model.RequestKind;
 import javax.inject.Inject;
 
@@ -50,7 +58,6 @@ final class UnscopedDirectInstanceRequestRepresentationFactory {
 
   @Inject
   UnscopedDirectInstanceRequestRepresentationFactory(
-      ComponentImplementation componentImplementation,
       AssistedFactoryRequestRepresentation.Factory assistedFactoryRequestRepresentationFactory,
       ComponentInstanceRequestRepresentation.Factory componentInstanceRequestRepresentationFactory,
       ComponentProvisionRequestRepresentation.Factory
@@ -84,40 +91,43 @@ final class UnscopedDirectInstanceRequestRepresentationFactory {
   RequestRepresentation create(ContributionBinding binding) {
     switch (binding.kind()) {
       case DELEGATE:
-        return delegateRequestRepresentationFactory.create(binding, RequestKind.INSTANCE);
+        return delegateRequestRepresentationFactory.create(
+            (DelegateBinding) binding, RequestKind.INSTANCE);
 
       case COMPONENT:
-        return componentInstanceRequestRepresentationFactory.create(binding);
+        return componentInstanceRequestRepresentationFactory.create((ComponentBinding) binding);
 
       case COMPONENT_DEPENDENCY:
         return componentRequirementRequestRepresentationFactory.create(
-            binding, ComponentRequirement.forDependency(binding.key().type().xprocessing()));
+            (ComponentDependencyBinding) binding);
 
       case COMPONENT_PROVISION:
-        return componentProvisionRequestRepresentationFactory.create((ProvisionBinding) binding);
+        return componentProvisionRequestRepresentationFactory.create(
+            (ComponentDependencyProvisionBinding) binding);
 
       case SUBCOMPONENT_CREATOR:
-        return subcomponentCreatorRequestRepresentationFactory.create(binding);
+        return subcomponentCreatorRequestRepresentationFactory.create(
+            (SubcomponentCreatorBinding) binding);
 
       case MULTIBOUND_SET:
-        return setRequestRepresentationFactory.create((ProvisionBinding) binding);
+        return setRequestRepresentationFactory.create((MultiboundSetBinding) binding);
 
       case MULTIBOUND_MAP:
-        return mapRequestRepresentationFactory.create((ProvisionBinding) binding);
+        return mapRequestRepresentationFactory.create((MultiboundMapBinding) binding);
 
       case OPTIONAL:
-        return optionalRequestRepresentationFactory.create((ProvisionBinding) binding);
+        return optionalRequestRepresentationFactory.create((OptionalBinding) binding);
 
       case BOUND_INSTANCE:
         return componentRequirementRequestRepresentationFactory.create(
-            binding, ComponentRequirement.forBoundInstance(binding));
+            (BoundInstanceBinding) binding);
 
       case ASSISTED_FACTORY:
-        return assistedFactoryRequestRepresentationFactory.create((ProvisionBinding) binding);
+        return assistedFactoryRequestRepresentationFactory.create((AssistedFactoryBinding) binding);
 
       case INJECTION:
       case PROVISION:
-        return simpleMethodRequestRepresentationFactory.create((ProvisionBinding) binding);
+        return simpleMethodRequestRepresentationFactory.create(binding);
 
       case ASSISTED_INJECTION:
       case MEMBERS_INJECTOR:

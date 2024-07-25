@@ -19,6 +19,7 @@ package dagger.internal.codegen.bindinggraphvalidation;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Verify.verify;
 import static dagger.internal.codegen.base.RequestKinds.canBeSatisfiedByProductionBinding;
+import static dagger.internal.codegen.base.RequestKinds.dependencyCanBeProduction;
 import static dagger.internal.codegen.extension.DaggerStreams.instancesOf;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
@@ -64,7 +65,7 @@ final class ProvisionDependencyOnProducerBindingValidator extends ValidationBind
     return bindingGraph.bindings().stream()
         .filter(binding -> binding.isProduction())
         .flatMap(binding -> incomingDependencies(binding, bindingGraph))
-        .filter(edge -> !dependencyCanUseProduction(edge, bindingGraph));
+        .filter(edge -> !dependencyCanBeProduction(edge, bindingGraph));
   }
 
   /** Returns the dependencies on {@code binding}. */
@@ -72,13 +73,6 @@ final class ProvisionDependencyOnProducerBindingValidator extends ValidationBind
   private Stream<DependencyEdge> incomingDependencies(Binding binding, BindingGraph bindingGraph) {
     return bindingGraph.network().inEdges(binding).stream()
         .flatMap(instancesOf(DependencyEdge.class));
-  }
-
-  // TODO(ronshapiro): merge with MissingBindingValidator.dependencyCanUseProduction
-  private boolean dependencyCanUseProduction(DependencyEdge edge, BindingGraph bindingGraph) {
-    return edge.isEntryPoint()
-        ? canBeSatisfiedByProductionBinding(edge.dependencyRequest().kind())
-        : bindingRequestingDependency(edge, bindingGraph).isProduction();
   }
 
   /**
@@ -108,6 +102,12 @@ final class ProvisionDependencyOnProducerBindingValidator extends ValidationBind
 
   private String dependencyErrorMessage(
       DependencyEdge dependencyOnProduction, BindingGraph bindingGraph) {
+    if (!canBeSatisfiedByProductionBinding(
+        dependencyOnProduction.dependencyRequest().kind(), false)) {
+      return String.format(
+          "request kind %s cannot be satisfied by production binding.",
+          dependencyOnProduction.dependencyRequest().kind());
+    }
     return String.format(
         "%s is a provision, which cannot depend on a production.",
         bindingRequestingDependency(dependencyOnProduction, bindingGraph).key());

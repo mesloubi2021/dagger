@@ -28,8 +28,8 @@ import static dagger.internal.codegen.base.RequestKinds.requestTypeName;
 import static dagger.internal.codegen.javapoet.AnnotationSpecs.Suppression.RAWTYPES;
 import static dagger.internal.codegen.javapoet.AnnotationSpecs.Suppression.UNCHECKED;
 import static dagger.internal.codegen.javapoet.TypeNames.abstractProducerOf;
+import static dagger.internal.codegen.javapoet.TypeNames.daggerProviderOf;
 import static dagger.internal.codegen.javapoet.TypeNames.listenableFutureOf;
-import static dagger.internal.codegen.javapoet.TypeNames.providerOf;
 import static dagger.internal.codegen.writing.ComponentImplementation.FieldSpecKind.ABSENT_OPTIONAL_FIELD;
 import static dagger.internal.codegen.writing.ComponentImplementation.MethodSpecKind.ABSENT_OPTIONAL_METHOD;
 import static dagger.internal.codegen.writing.ComponentImplementation.TypeSpecKind.PRESENT_FACTORY;
@@ -57,20 +57,17 @@ import dagger.internal.Preconditions;
 import dagger.internal.codegen.base.OptionalType;
 import dagger.internal.codegen.base.OptionalType.OptionalKind;
 import dagger.internal.codegen.binding.BindingType;
-import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.binding.FrameworkType;
+import dagger.internal.codegen.binding.OptionalBinding;
 import dagger.internal.codegen.javapoet.AnnotationSpecs;
 import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.model.RequestKind;
-import dagger.producers.Producer;
-import dagger.producers.internal.Producers;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.Executor;
 import javax.inject.Inject;
-import javax.inject.Provider;
 
 /** The nested class and static methods required by the component to implement optional bindings. */
 // TODO(dpb): Name members simply if a component uses only one of Guava or JDK Optional.
@@ -122,7 +119,7 @@ final class OptionalFactories {
    * Returns an expression that calls a static method that returns a {@code Provider<Optional<T>>}
    * for absent optional bindings.
    */
-  CodeBlock absentOptionalProvider(ContributionBinding binding) {
+  CodeBlock absentOptionalProvider(OptionalBinding binding) {
     verify(
         binding.bindingType().equals(BindingType.PROVISION),
         "Absent optional bindings should be provisions: %s",
@@ -150,15 +147,15 @@ final class OptionalFactories {
                 "absent%sProvider", UPPER_UNDERSCORE.to(UPPER_CAMEL, optionalKind.name())))
         .addModifiers(PRIVATE, STATIC)
         .addTypeVariable(typeVariable)
-        .returns(providerOf(optionalKind.of(typeVariable)))
+        .returns(daggerProviderOf(optionalKind.of(typeVariable)))
         .addJavadoc(
             "Returns a {@link $T} that returns {@code $L}.",
-            TypeNames.PROVIDER,
+            TypeNames.DAGGER_PROVIDER,
             optionalKind.absentValueExpression())
         .addCode("$L // safe covariant cast\n", AnnotationSpecs.suppressWarnings(UNCHECKED))
         .addStatement(
             "$1T provider = ($1T) $2N",
-            providerOf(optionalKind.of(typeVariable)),
+            daggerProviderOf(optionalKind.of(typeVariable)),
             perGeneratedFileCache.absentOptionalProviderFields.computeIfAbsent(
                 optionalKind,
                 kind -> {
@@ -176,7 +173,7 @@ final class OptionalFactories {
    */
   private FieldSpec absentOptionalProviderField(OptionalKind optionalKind) {
     return FieldSpec.builder(
-            TypeNames.PROVIDER,
+            TypeNames.DAGGER_PROVIDER,
             String.format("ABSENT_%s_PROVIDER", optionalKind.name()),
             PRIVATE,
             STATIC,
@@ -185,7 +182,7 @@ final class OptionalFactories {
         .initializer("$T.create($L)", InstanceFactory.class, optionalKind.absentValueExpression())
         .addJavadoc(
             "A {@link $T} that returns {@code $L}.",
-            TypeNames.PROVIDER,
+            TypeNames.DAGGER_PROVIDER,
             optionalKind.absentValueExpression())
         .build();
   }
@@ -193,7 +190,7 @@ final class OptionalFactories {
   /** Information about the type of a factory for present bindings. */
   @AutoValue
   abstract static class PresentFactorySpec {
-    /** Whether the factory is a {@link Provider} or a {@link Producer}. */
+    /** Whether the factory is a {@code Provider} or a {@code Producer}. */
     abstract FrameworkType frameworkType();
 
     /** What kind of {@code Optional} is returned. */
@@ -274,7 +271,7 @@ final class OptionalFactories {
           .toString();
     }
 
-    private static PresentFactorySpec of(ContributionBinding binding) {
+    private static PresentFactorySpec of(OptionalBinding binding) {
       return new AutoValue_OptionalFactories_PresentFactorySpec(
           FrameworkType.forBindingType(binding.bindingType()),
           OptionalType.from(binding.key()).kind(),
@@ -302,10 +299,10 @@ final class OptionalFactories {
    *       {@code Producer<Optional<Produced<T>>>}.
    * </ul>
    *
-   * @param delegateFactory an expression for a {@link Provider} or {@link Producer} of the
+   * @param delegateFactory an expression for a {@code Provider} or {@code Producer} of the
    *     underlying type
    */
-  CodeBlock presentOptionalFactory(ContributionBinding binding, CodeBlock delegateFactory) {
+  CodeBlock presentOptionalFactory(OptionalBinding binding, CodeBlock delegateFactory) {
     return CodeBlock.of(
         "$N.of($L)",
         perGeneratedFileCache.presentFactoryClasses.computeIfAbsent(
@@ -415,7 +412,9 @@ final class OptionalFactories {
                         spec.optionalKind(),
                         spec.valueType(),
                         CodeBlock.of(
-                            "$T.createFutureProduced($N.get())", Producers.class, delegateField)))
+                            "$T.createFutureProduced($N.get())",
+                            TypeNames.PRODUCERS,
+                            delegateField)))
                 .build();
 
           default:

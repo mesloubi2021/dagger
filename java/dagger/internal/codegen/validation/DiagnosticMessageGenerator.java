@@ -164,18 +164,11 @@ public final class DiagnosticMessageGenerator {
       ImmutableList<DependencyEdge> dependencyTrace,
       ImmutableSet<DependencyEdge> requests,
       ImmutableSet<DependencyEdge> entryPoints) {
-    StringBuilder message =
-        graph.isFullBindingGraph()
-            ? new StringBuilder()
-            : new StringBuilder(dependencyTrace.size() * 100 /* a guess heuristic */);
-
-    // Print the dependency trace unless it's a full binding graph
-    if (!graph.isFullBindingGraph()) {
-      dependencyTrace.forEach(
-          edge -> dependencyRequestFormatter.appendFormatLine(message, edge.dependencyRequest()));
-      if (!dependencyTrace.isEmpty()) {
-        appendComponentPathUnlessAtRoot(message, source(getLast(dependencyTrace)));
-      }
+    StringBuilder message = new StringBuilder(dependencyTrace.size() * 100 /* a guess heuristic */);
+    dependencyTrace.forEach(
+        edge -> dependencyRequestFormatter.appendFormatLine(message, edge.dependencyRequest()));
+    if (!dependencyTrace.isEmpty()) {
+      appendComponentPathUnlessAtRoot(message, source(getLast(dependencyTrace)));
     }
     message.append(getRequestsNotInTrace(dependencyTrace, requests, entryPoints));
     return message.toString();
@@ -190,25 +183,19 @@ public final class DiagnosticMessageGenerator {
     ImmutableSet<XElement> requestsToPrint =
         requests.stream()
             // if printing entry points, skip entry points and the traced request
-            .filter(
-                request ->
-                    graph.isFullBindingGraph()
-                        || (!request.isEntryPoint() && !isTracedRequest(dependencyTrace, request)))
+            .filter(request -> !request.isEntryPoint())
+            .filter(request -> !isTracedRequest(dependencyTrace, request))
             .map(request -> request.dependencyRequest().requestElement())
             .flatMap(presentValues())
             .map(DaggerElement::xprocessing)
             .collect(toImmutableSet());
     if (!requestsToPrint.isEmpty()) {
-      message
-          .append("\nIt is")
-          .append(graph.isFullBindingGraph() ? " " : " also ")
-          .append("requested at:");
+      message.append("\nIt is also requested at:");
       elementFormatter.formatIndentedList(message, requestsToPrint, 1);
     }
 
-    // Print the remaining entry points, showing which component they're in, unless it's a full
-    // binding graph
-    if (!graph.isFullBindingGraph() && entryPoints.size() > 1) {
+    // Print the remaining entry points, showing which component they're in
+    if (entryPoints.size() > 1) {
       message.append("\nThe following other entry points also depend on it:");
       entryPointFormatter.formatIndentedList(
           message,
@@ -253,9 +240,14 @@ public final class DiagnosticMessageGenerator {
         }
       };
 
-  private static boolean isTracedRequest(
+  private boolean isTracedRequest(
       ImmutableList<DependencyEdge> dependencyTrace, DependencyEdge request) {
-    return !dependencyTrace.isEmpty() && request.equals(dependencyTrace.get(0));
+    return !dependencyTrace.isEmpty()
+        && request.dependencyRequest().equals(dependencyTrace.get(0).dependencyRequest())
+        // Comparing the dependency request is not enough since the request is just the key.
+        // Instead, we check that the target incident node is the same.
+        && graph.network().incidentNodes(request).target()
+            .equals(graph.network().incidentNodes(dependencyTrace.get(0)).target());
   }
 
   /**

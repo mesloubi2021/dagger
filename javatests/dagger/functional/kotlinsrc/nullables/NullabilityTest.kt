@@ -21,9 +21,11 @@ import dagger.Component
 import dagger.Module
 import dagger.Provides
 import dagger.Reusable
+import dagger.multibindings.IntoSet
 import java.lang.NullPointerException
 import javax.inject.Inject
 import javax.inject.Provider
+import javax.inject.Singleton
 import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,25 +36,47 @@ class NullabilityTest {
   @Component(dependencies = [NullComponent::class])
   internal interface NullComponentWithDependency {
     fun string(): String?
+
     fun number(): Number
+
     fun stringProvider(): Provider<String>
+
     fun numberProvider(): Provider<Number>
   }
+
+  interface Bar<T> {}
+
+  class BarNoNull : Bar<String>
+
+  class BarWithNull : Bar<String?>
 
   @Component(modules = [NullModule::class])
   internal interface NullComponent {
     fun string(): String?
+
     fun integer(): Int?
+
     fun nullFoo(): NullFoo
+
     fun number(): Number
+
     fun stringProvider(): Provider<String>
+
     fun numberProvider(): Provider<Number>
+
+    fun setOfBar(): Set<Bar<String>>
+
+    fun setOfBarWithNullableArg(): Set<Bar<String?>>
   }
 
   @Module
   internal class NullModule {
     var numberValue: Number? = null
     var integerCallCount = 0
+
+    @IntoSet @Provides fun providesNullableStringInToSet(): Bar<String?> = BarWithNull()
+
+    @IntoSet @Provides fun providesNonNullStringIntoSet(): Bar<String> = BarNoNull()
 
     @Provides fun provideNullableString(): String? = null
 
@@ -73,7 +97,7 @@ class NullabilityTest {
     val string: String?,
     val number: Number,
     val stringProvider: Provider<String>,
-    val numberProvider: Provider<Number>
+    val numberProvider: Provider<Number>,
   ) {
     var methodInjectedString: String? = null
     lateinit var methodInjectedNumber: Number
@@ -85,7 +109,7 @@ class NullabilityTest {
       string: String?,
       number: Number,
       stringProvider: Provider<String>,
-      numberProvider: Provider<Number>
+      numberProvider: Provider<Number>,
     ) {
       methodInjectedString = string
       methodInjectedNumber = number
@@ -126,12 +150,12 @@ class NullabilityTest {
     validate(
       nullFoo.methodInjectedString,
       nullFoo.methodInjectedStringProvider,
-      nullFoo.methodInjectedNumberProvider
+      nullFoo.methodInjectedNumberProvider,
     )
     validate(
       nullFoo.fieldInjectedString,
       nullFoo.fieldInjectedStringProvider,
-      nullFoo.fieldInjectedNumberProvider
+      nullFoo.fieldInjectedNumberProvider,
     )
   }
 
@@ -146,6 +170,8 @@ class NullabilityTest {
     assertThat(module.integerCallCount).isEqualTo(1)
     assertThat(component.integer()).isNull()
     assertThat(module.integerCallCount).isEqualTo(1)
+    assertThat(component.setOfBar().size).isEqualTo(2)
+    assertThat(component.setOfBarWithNullableArg().size).isEqualTo(2)
   }
 
   @Test
@@ -153,11 +179,20 @@ class NullabilityTest {
     val nullComponent: NullComponent =
       object : NullComponent {
         override fun string(): String? = null
+
         override fun integer(): Int? = null
+
         override fun stringProvider(): Provider<String> = Provider { null!! }
+
         override fun numberProvider(): Provider<Number> = Provider { null!! }
+
         override fun number(): Number = null!!
+
         override fun nullFoo(): NullFoo = null!!
+
+        override fun setOfBar(): Set<Bar<String>> = emptySet()
+
+        override fun setOfBarWithNullableArg(): Set<Bar<String?>> = emptySet()
       }
     val component =
       DaggerNullabilityTest_NullComponentWithDependency.builder()
@@ -181,7 +216,7 @@ class NullabilityTest {
   private fun validate(
     string: String?,
     stringProvider: Provider<String>,
-    numberProvider: Provider<Number>
+    numberProvider: Provider<Number>,
   ) {
     assertThat(string).isNull()
     assertThat(numberProvider).isNotNull()

@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import dagger.internal.Provider;
 import dagger.producers.Producer;
 import dagger.producers.internal.AbstractProducer;
 import dagger.producers.internal.CancellableProducer;
@@ -33,7 +34,6 @@ import dagger.producers.monitoring.ProducerToken;
 import dagger.producers.monitoring.ProductionComponentMonitor;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import javax.inject.Provider;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,7 +55,6 @@ public class ProducerFactoryTest {
     MockitoAnnotations.initMocks(this);
     monitor = Mockito.mock(ProducerMonitor.class, Mockito.CALLS_REAL_METHODS);
     when(componentMonitor.producerMonitorFor(any(ProducerToken.class))).thenReturn(monitor);
-    // TODO(beder): Use Providers.of when available.
     executorProvider =
         new Provider<Executor>() {
           @Override

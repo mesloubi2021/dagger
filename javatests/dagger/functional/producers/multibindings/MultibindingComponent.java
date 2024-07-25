@@ -29,7 +29,6 @@ import dagger.producers.ProductionComponent;
 import java.util.Map;
 import java.util.Set;
 
-
 @ProductionComponent(
   modules = {ExecutorModule.class, MultibindingProducerModule.class, MultibindingModule.class}
 )
@@ -47,6 +46,12 @@ interface MultibindingComponent {
   ListenableFuture<Map<Integer, Producer<String>>> mapOfProducer();
 
   ListenableFuture<Map<Integer, Produced<String>>> mapOfProduced();
+
+  ListenableFuture<Map<Class<?>, Produced<String>>> lazyClassKeyMapOfProduced();
+
+  ListenableFuture<Map<Class<?>, String>> lazyClassKeyMapOfString();
+
+  ListenableFuture<Map<Class<?>, Producer<String>>> lazyClassKeyMapOfProducer();
 
   @PossiblyThrowingMap
   ListenableFuture<Map<Integer, String>> possiblyThrowingMap();

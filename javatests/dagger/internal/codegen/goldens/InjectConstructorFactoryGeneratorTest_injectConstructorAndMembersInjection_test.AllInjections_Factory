@@ -18,7 +18,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 public final class AllInjections_Factory implements Factory<AllInjections> {
   private final Provider<String> sProvider;

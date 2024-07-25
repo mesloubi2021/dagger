@@ -156,13 +156,13 @@ class GradleTestRunner(val tempFolder: TemporaryFolder) {
         }
 
         android {
-          compileSdkVersion 32
-          buildToolsVersion "32.0.0"
+          compileSdkVersion 33
+          buildToolsVersion "33.0.0"
 
           defaultConfig {
             ${ if (isAppProject) "applicationId \"plugin.test\"" else "" }
             minSdkVersion 21
-            targetSdkVersion 32
+            targetSdkVersion 33
           }
 
           compileOptions {
@@ -189,7 +189,8 @@ class GradleTestRunner(val tempFolder: TemporaryFolder) {
           ${hiltOptions.joinToString(separator = "\n")}
         }
         ${additionalClosures.joinToString(separator = "\n")}
-        """.trimIndent()
+        """
+            .trimIndent()
         )
       }
   }
@@ -198,11 +199,14 @@ class GradleTestRunner(val tempFolder: TemporaryFolder) {
     gradlePropertiesFile?.delete()
     gradlePropertiesFile =
       tempFolder.newFile("gradle.properties").apply {
-        writeText("""
+        writeText(
+          """
         android.useAndroidX=true
         // TODO(b/296583777): See if there's a better way to fix the OOM error.
         org.gradle.jvmargs=-XX:MaxMetaspaceSize=1g
-        """.trimIndent())
+        """
+            .trimIndent()
+        )
       }
   }
 
@@ -220,7 +224,8 @@ class GradleTestRunner(val tempFolder: TemporaryFolder) {
                 ${activities.joinToString(separator = "\n")}
             </application>
         </manifest>
-        """.trimIndent()
+        """
+            .trimIndent()
         )
       }
   }

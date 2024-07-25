@@ -24,6 +24,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static dagger.internal.codegen.base.Keys.isValidImplicitProvisionKey;
 import static dagger.internal.codegen.base.Keys.isValidMembersInjectionKey;
 import static dagger.internal.codegen.binding.AssistedInjectionAnnotations.assistedInjectedConstructors;
+import static dagger.internal.codegen.binding.InjectionAnnotations.hasInjectAnnotation;
 import static dagger.internal.codegen.binding.InjectionAnnotations.injectedConstructors;
 import static dagger.internal.codegen.binding.SourceFiles.generatedClassNameForBinding;
 import static dagger.internal.codegen.extension.DaggerCollectors.toOptional;
@@ -50,12 +51,15 @@ import dagger.Component;
 import dagger.Provides;
 import dagger.internal.codegen.base.SourceFileGenerationException;
 import dagger.internal.codegen.base.SourceFileGenerator;
+import dagger.internal.codegen.binding.AssistedInjectionBinding;
 import dagger.internal.codegen.binding.Binding;
 import dagger.internal.codegen.binding.BindingFactory;
+import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.binding.InjectBindingRegistry;
+import dagger.internal.codegen.binding.InjectionBinding;
 import dagger.internal.codegen.binding.KeyFactory;
 import dagger.internal.codegen.binding.MembersInjectionBinding;
-import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.binding.MembersInjectorBinding;
 import dagger.internal.codegen.compileroption.CompilerOptions;
 import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.model.Key;
@@ -203,7 +207,7 @@ final class InjectBindingRegistryImpl implements InjectBindingRegistry {
     }
   }
 
-  private final BindingsCollection<ProvisionBinding> provisionBindings =
+  private final BindingsCollection<ContributionBinding> injectionBindings =
       new BindingsCollection<>(TypeNames.PROVIDER);
   private final BindingsCollection<MembersInjectionBinding> membersInjectionBindings =
       new BindingsCollection<>(TypeNames.MEMBERS_INJECTOR);
@@ -228,15 +232,15 @@ final class InjectBindingRegistryImpl implements InjectBindingRegistry {
   // TODO(dpb): make the SourceFileGenerators fields so they don't have to be passed in
   @Override
   public void generateSourcesForRequiredBindings(
-      SourceFileGenerator<ProvisionBinding> factoryGenerator,
+      SourceFileGenerator<ContributionBinding> factoryGenerator,
       SourceFileGenerator<MembersInjectionBinding> membersInjectorGenerator)
       throws SourceFileGenerationException {
-    provisionBindings.generateBindings(factoryGenerator);
+    injectionBindings.generateBindings(factoryGenerator);
     membersInjectionBindings.generateBindings(membersInjectorGenerator);
   }
 
   @Override
-  public Optional<ProvisionBinding> tryRegisterInjectConstructor(
+  public Optional<ContributionBinding> tryRegisterInjectConstructor(
       XConstructorElement constructorElement) {
     return tryRegisterConstructor(
         constructorElement,
@@ -245,7 +249,7 @@ final class InjectBindingRegistryImpl implements InjectBindingRegistry {
   }
 
   @CanIgnoreReturnValue
-  private Optional<ProvisionBinding> tryRegisterConstructor(
+  private Optional<ContributionBinding> tryRegisterConstructor(
       XConstructorElement constructorElement,
       Optional<XType> resolvedType,
       boolean isCalledFromInjectProcessor) {
@@ -260,17 +264,30 @@ final class InjectBindingRegistryImpl implements InjectBindingRegistry {
 
     XType type = typeElement.getType();
     Key key = keyFactory.forInjectConstructorWithResolvedType(type);
-    ProvisionBinding cachedBinding = provisionBindings.getBinding(key);
+    ContributionBinding cachedBinding = injectionBindings.getBinding(key);
     if (cachedBinding != null) {
       return Optional.of(cachedBinding);
     }
 
-    ProvisionBinding binding = bindingFactory.injectionBinding(constructorElement, resolvedType);
-    provisionBindings.tryRegisterBinding(binding, isCalledFromInjectProcessor);
-    if (!binding.injectionSites().isEmpty()) {
-      tryRegisterMembersInjectedType(typeElement, resolvedType, isCalledFromInjectProcessor);
+    if (hasInjectAnnotation(constructorElement)) {
+      InjectionBinding binding = bindingFactory.injectionBinding(constructorElement, resolvedType);
+      injectionBindings.tryRegisterBinding(binding, isCalledFromInjectProcessor);
+      if (!binding.injectionSites().isEmpty()) {
+        tryRegisterMembersInjectedType(typeElement, resolvedType, isCalledFromInjectProcessor);
+      }
+      return Optional.of(binding);
+    } else if (constructorElement.hasAnnotation(TypeNames.ASSISTED_INJECT)) {
+      AssistedInjectionBinding binding =
+          bindingFactory.assistedInjectionBinding(constructorElement, resolvedType);
+      injectionBindings.tryRegisterBinding(binding, isCalledFromInjectProcessor);
+      if (!binding.injectionSites().isEmpty()) {
+        tryRegisterMembersInjectedType(typeElement, resolvedType, isCalledFromInjectProcessor);
+      }
+      return Optional.of(binding);
     }
-    return Optional.of(binding);
+    throw new AssertionError(
+        "Expected either an @Inject or @AssistedInject annotated constructor: "
+            + constructorElement.getEnclosingElement().getQualifiedName());
   }
 
   @Override
@@ -336,12 +353,12 @@ final class InjectBindingRegistryImpl implements InjectBindingRegistry {
 
   @CanIgnoreReturnValue
   @Override
-  public Optional<ProvisionBinding> getOrFindProvisionBinding(Key key) {
+  public Optional<ContributionBinding> getOrFindInjectionBinding(Key key) {
     checkNotNull(key);
     if (!isValidImplicitProvisionKey(key)) {
       return Optional.empty();
     }
-    ProvisionBinding binding = provisionBindings.getBinding(key);
+    ContributionBinding binding = injectionBindings.getBinding(key);
     if (binding != null) {
       return Optional.of(binding);
     }
@@ -385,7 +402,7 @@ final class InjectBindingRegistryImpl implements InjectBindingRegistry {
   }
 
   @Override
-  public Optional<ProvisionBinding> getOrFindMembersInjectorProvisionBinding(Key key) {
+  public Optional<MembersInjectorBinding> getOrFindMembersInjectorBinding(Key key) {
     if (!isValidMembersInjectionKey(key)) {
       return Optional.empty();
     }

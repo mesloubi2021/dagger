@@ -2,8 +2,8 @@ package test;
 
 import dagger.internal.DaggerGenerated;
 import dagger.internal.DoubleCheck;
+import dagger.internal.Provider;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 import test.sub.TestComponentBase_Dep_Factory;
 import test.sub.TestComponentBase_ProtectedType_Factory;
 
@@ -16,7 +16,9 @@ import test.sub.TestComponentBase_ProtectedType_Factory;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 public final class DaggerTestComponent {
   private DaggerTestComponent() {

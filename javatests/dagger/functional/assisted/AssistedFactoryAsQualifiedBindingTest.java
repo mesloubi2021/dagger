@@ -17,7 +17,6 @@
 package dagger.functional.assisted;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import dagger.Binds;

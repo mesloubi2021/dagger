@@ -28,6 +28,7 @@ import static dagger.internal.codegen.base.ComponentAnnotation.subcomponentAnnot
 import static dagger.internal.codegen.base.ComponentCreatorAnnotation.creatorAnnotationsFor;
 import static dagger.internal.codegen.base.ModuleAnnotation.moduleAnnotation;
 import static dagger.internal.codegen.base.Scopes.productionScope;
+import static dagger.internal.codegen.base.Util.reentrantComputeIfAbsent;
 import static dagger.internal.codegen.binding.ConfigurationAnnotations.enclosedAnnotatedTypes;
 import static dagger.internal.codegen.binding.ConfigurationAnnotations.isSubcomponentCreator;
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableMap;
@@ -47,6 +48,7 @@ import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -57,6 +59,7 @@ import com.squareup.javapoet.TypeName;
 import dagger.Component;
 import dagger.Module;
 import dagger.Subcomponent;
+import dagger.internal.codegen.base.ClearableCache;
 import dagger.internal.codegen.base.ComponentAnnotation;
 import dagger.internal.codegen.base.DaggerSuperficialValidation;
 import dagger.internal.codegen.base.ModuleAnnotation;
@@ -70,6 +73,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /**
  * A component declaration.
@@ -84,6 +88,8 @@ import javax.inject.Inject;
 @CheckReturnValue
 @AutoValue
 public abstract class ComponentDescriptor {
+  private BindingFactory bindingFactory;
+
   /** The annotation that specifies that {@link #typeElement()} is a component. */
   public abstract ComponentAnnotation annotation();
 
@@ -312,6 +318,130 @@ public abstract class ComponentDescriptor {
         : Optional.empty();
   }
 
+  /** Returns the bindings for the component. */
+  @Memoized
+  public ImmutableSet<ContributionBinding> bindings() {
+    ImmutableSet.Builder<ContributionBinding> builder = ImmutableSet.builder();
+    componentBinding().ifPresent(builder::add);
+    return builder
+        .addAll(componentDependencyBindings())
+        .addAll(boundInstanceBindings())
+        .addAll(subcomponentCreatorBindings())
+        .addAll(moduleBindings())
+        .build();
+  }
+
+  /** Returns the binding for the component, itself, if this is a real component. */
+  @Memoized
+  Optional<ContributionBinding> componentBinding() {
+    return isRealComponent()
+        ? Optional.of(bindingFactory.componentBinding(typeElement()))
+        : Optional.empty();
+  }
+
+  /** Returns the bindings for the component dependency and those contributed by its methods. */
+  @Memoized
+  ImmutableSet<ContributionBinding> componentDependencyBindings() {
+    ImmutableSet.Builder<ContributionBinding> builder = ImmutableSet.builder();
+    for (ComponentRequirement dependency : dependencies()) {
+      builder.add(bindingFactory.componentDependencyBinding(dependency));
+
+      // Within a component dependency, we want to allow the same method to appear multiple
+      // times assuming it is the exact same method. We do this by tracking a set of bindings
+      // we've already added with the binding element removed since that is the only thing
+      // allowed to differ.
+      HashMultimap<String, ContributionBinding> dedupeBindings = HashMultimap.create();
+      XTypeElements.getAllMethods(dependency.typeElement()).stream()
+          // MembersInjection methods aren't "provided" explicitly, so ignore them.
+          .filter(ComponentDescriptor::isComponentContributionMethod)
+          .forEach(
+              method -> {
+                ContributionBinding binding =
+                    isProduction() && isComponentProductionMethod(method)
+                        ? bindingFactory.componentDependencyProductionMethodBinding(method)
+                        : bindingFactory.componentDependencyProvisionMethodBinding(method);
+                if (dedupeBindings.put(
+                    getSimpleName(method),
+                    // Remove the binding element since we know that will be different, but
+                    // everything else we want to be the same to consider it a duplicate.
+                    binding.toBuilder().clearBindingElement().build())) {
+                  builder.add(binding);
+                }
+              });
+    }
+    return builder.build();
+  }
+
+  /** Returns the {@code @BindsInstance} bindings required to create this component. */
+  @Memoized
+  ImmutableSet<ContributionBinding> boundInstanceBindings() {
+    return creatorDescriptor().isPresent()
+        ? creatorDescriptor().get().boundInstanceRequirements().stream()
+            .map(
+                requirement ->
+                    bindingFactory.boundInstanceBinding(
+                        requirement,
+                        creatorDescriptor().get().elementForRequirement(requirement)))
+            .collect(toImmutableSet())
+        : ImmutableSet.of();
+  }
+
+  /** Returns the subcomponent creator bindings for this component. */
+  @Memoized
+  ImmutableSet<ContributionBinding> subcomponentCreatorBindings() {
+    ImmutableSet.Builder<ContributionBinding> builder = ImmutableSet.builder();
+    childComponentsDeclaredByBuilderEntryPoints()
+        .forEach(
+            (builderEntryPoint, childComponent) -> {
+              if (!childComponentsDeclaredByModules().contains(childComponent)) {
+                builder.add(
+                    bindingFactory.subcomponentCreatorBinding(
+                        builderEntryPoint.methodElement(), typeElement()));
+              }
+            });
+    return builder.build();
+  }
+
+  @Memoized
+  ImmutableSet<ContributionBinding> moduleBindings() {
+    return modules().stream()
+        .map(ModuleDescriptor::bindings)
+        .flatMap(ImmutableSet::stream)
+        .collect(toImmutableSet());
+  }
+
+  @Memoized
+  public ImmutableSet<DelegateDeclaration> delegateDeclarations() {
+    return modules().stream()
+        .map(ModuleDescriptor::delegateDeclarations)
+        .flatMap(ImmutableSet::stream)
+        .collect(toImmutableSet());
+  }
+
+  @Memoized
+  public ImmutableSet<MultibindingDeclaration> multibindingDeclarations() {
+    return modules().stream()
+        .map(ModuleDescriptor::multibindingDeclarations)
+        .flatMap(ImmutableSet::stream)
+        .collect(toImmutableSet());
+  }
+
+  @Memoized
+  public ImmutableSet<OptionalBindingDeclaration> optionalBindingDeclarations() {
+    return modules().stream()
+        .map(ModuleDescriptor::optionalDeclarations)
+        .flatMap(ImmutableSet::stream)
+        .collect(toImmutableSet());
+  }
+
+  @Memoized
+  public ImmutableSet<SubcomponentDeclaration> subcomponentDeclarations() {
+    return modules().stream()
+        .map(ModuleDescriptor::subcomponentDeclarations)
+        .flatMap(ImmutableSet::stream)
+        .collect(toImmutableSet());
+  }
+
   @Memoized
   @Override
   public int hashCode() {
@@ -375,7 +505,7 @@ public abstract class ComponentDescriptor {
    * Returns {@code true} if a method could be a component entry point but not a members-injection
    * method.
    */
-  static boolean isComponentContributionMethod(XMethodElement method) {
+  private static boolean isComponentContributionMethod(XMethodElement method) {
     return method.getParameters().isEmpty()
         && !isVoid(method.getReturnType())
         && !method.getEnclosingElement().getClassName().equals(TypeName.OBJECT)
@@ -383,26 +513,31 @@ public abstract class ComponentDescriptor {
   }
 
   /** Returns {@code true} if a method could be a component production entry point. */
-  static boolean isComponentProductionMethod(XMethodElement method) {
+  private static boolean isComponentProductionMethod(XMethodElement method) {
     return isComponentContributionMethod(method) && isFutureType(method.getReturnType());
   }
 
   /** A factory for creating a {@link ComponentDescriptor}. */
-  public static final class Factory {
+  @Singleton
+  public static final class Factory implements ClearableCache {
     private final XProcessingEnv processingEnv;
+    private final BindingFactory bindingFactory;
     private final DependencyRequestFactory dependencyRequestFactory;
     private final ModuleDescriptor.Factory moduleDescriptorFactory;
     private final InjectionAnnotations injectionAnnotations;
     private final DaggerSuperficialValidation superficialValidation;
+    private final Map<XTypeElement, ComponentDescriptor> cache = new HashMap<>();
 
     @Inject
     Factory(
         XProcessingEnv processingEnv,
+        BindingFactory bindingFactory,
         DependencyRequestFactory dependencyRequestFactory,
         ModuleDescriptor.Factory moduleDescriptorFactory,
         InjectionAnnotations injectionAnnotations,
         DaggerSuperficialValidation superficialValidation) {
       this.processingEnv = processingEnv;
+      this.bindingFactory = bindingFactory;
       this.dependencyRequestFactory = dependencyRequestFactory;
       this.moduleDescriptorFactory = moduleDescriptorFactory;
       this.injectionAnnotations = injectionAnnotations;
@@ -436,6 +571,12 @@ public abstract class ComponentDescriptor {
     }
 
     private ComponentDescriptor create(
+        XTypeElement typeElement, ComponentAnnotation componentAnnotation) {
+      return reentrantComputeIfAbsent(
+          cache, typeElement, unused -> createUncached(typeElement, componentAnnotation));
+    }
+
+    private ComponentDescriptor createUncached(
         XTypeElement typeElement, ComponentAnnotation componentAnnotation) {
       ImmutableSet<ComponentRequirement> componentDependencies =
           componentAnnotation.dependencyTypes().stream()
@@ -503,17 +644,20 @@ public abstract class ComponentDescriptor {
             .map(this::subcomponentDescriptor)
             .collect(toImmutableSet());
 
-      return new AutoValue_ComponentDescriptor(
-          componentAnnotation,
-          typeElement,
-          componentDependencies,
-          transitiveModules,
-          scopes,
-          subcomponentsFromModules,
-          subcomponentsByFactoryMethod.buildOrThrow(),
-          subcomponentsByBuilderMethod.buildOrThrow(),
-          componentMethodsBuilder.build(),
-          creatorDescriptor);
+      ComponentDescriptor componentDescriptor =
+          new AutoValue_ComponentDescriptor(
+              componentAnnotation,
+              typeElement,
+              componentDependencies,
+              transitiveModules,
+              scopes,
+              subcomponentsFromModules,
+              subcomponentsByFactoryMethod.buildOrThrow(),
+              subcomponentsByBuilderMethod.buildOrThrow(),
+              componentMethodsBuilder.build(),
+              creatorDescriptor);
+      componentDescriptor.bindingFactory = bindingFactory;
+      return componentDescriptor;
     }
 
     private ComponentMethodDescriptor getDescriptorForComponentMethod(
@@ -571,6 +715,11 @@ public abstract class ComponentDescriptor {
       }
 
       return descriptor.build();
+    }
+
+    @Override
+    public void clearCache() {
+      cache.clear();
     }
   }
 }

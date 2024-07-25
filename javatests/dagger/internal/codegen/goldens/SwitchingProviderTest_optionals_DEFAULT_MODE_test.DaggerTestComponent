@@ -3,9 +3,9 @@ package test;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.InstanceFactory;
 import dagger.internal.Preconditions;
+import dagger.internal.Provider;
 import java.util.Optional;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -16,7 +16,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   /**
@@ -94,12 +96,12 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<Optional<Present>> providerOfOptionalOfPresent() {
+    public javax.inject.Provider<Optional<Present>> providerOfOptionalOfPresent() {
       return optionalOfPresentProvider;
     }
 
     @Override
-    public Provider<Optional<Absent>> providerOfOptionalOfAbsent() {
+    public javax.inject.Provider<Optional<Absent>> providerOfOptionalOfAbsent() {
       return optionalOfAbsentProvider;
     }
   }

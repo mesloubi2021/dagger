@@ -2,8 +2,8 @@ package test;
 
 import dagger.internal.DaggerGenerated;
 import dagger.internal.DelegateFactory;
+import dagger.internal.Provider;
 import javax.annotation.Generated;
-import javax.inject.Provider;
 import other.FooImpl_Factory;
 import other.OtherEntryPoint;
 import other.OtherEntryPoint_Factory;
@@ -17,7 +17,9 @@ import other.OtherEntryPoint_Factory;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {

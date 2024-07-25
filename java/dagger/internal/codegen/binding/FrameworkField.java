@@ -24,12 +24,14 @@ import static dagger.internal.codegen.model.BindingKind.MEMBERS_INJECTOR;
 import static dagger.internal.codegen.xprocessing.XElements.getSimpleName;
 
 import androidx.room.compiler.processing.XElement;
-import androidx.room.compiler.processing.XType;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.CaseFormat;
+import com.google.common.base.Preconditions;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
+import dagger.internal.codegen.base.MapType;
+import dagger.internal.codegen.javapoet.TypeNames;
 import java.util.Optional;
 
 /**
@@ -49,16 +51,17 @@ public abstract class FrameworkField {
   /**
    * Creates a framework field.
    *
-   * @param frameworkClassName the name of the framework class (e.g., {@link javax.inject.Provider})
-   * @param valueTypeName the name of the type parameter of the framework class (e.g., {@code Foo}
-   *     for {@code Provider<Foo>}
-   * @param fieldName the name of the field
+   * @param fieldType the type of the framework field (e.g., {@code Provider<Foo>}).
+   * @param fieldName the base name of the field. The name of the raw type of the field will be
+   *     added as a suffix
    */
-  public static FrameworkField create(
-      ClassName frameworkClassName, TypeName valueTypeName, String fieldName) {
-    String suffix = frameworkClassName.simpleName();
+  public static FrameworkField create(TypeName fieldType, String fieldName) {
+    Preconditions.checkState(
+        fieldType instanceof ClassName || fieldType instanceof ParameterizedTypeName,
+        "Can only create a field with a class name or parameterized type name");
+    String suffix = ((ClassName) TypeNames.rawTypeName(fieldType)).simpleName();
     return new AutoValue_FrameworkField(
-        ParameterizedTypeName.get(frameworkClassName, valueTypeName),
+        fieldType,
         fieldName.endsWith(suffix) ? fieldName : fieldName + suffix);
   }
 
@@ -71,15 +74,26 @@ public abstract class FrameworkField {
   public static FrameworkField forBinding(
       ContributionBinding binding, Optional<ClassName> frameworkClassName) {
     return create(
-        frameworkClassName.orElse(binding.frameworkType().frameworkClassName()),
-        fieldValueType(binding).getTypeName(),
+        fieldType(binding, frameworkClassName.orElse(binding.frameworkType().frameworkClassName())),
         frameworkFieldName(binding));
   }
 
-  private static XType fieldValueType(ContributionBinding binding) {
-    return binding.contributionType().isMultibinding()
-        ? binding.contributedType()
-        : binding.key().type().xprocessing();
+  private static TypeName fieldType(ContributionBinding binding, ClassName frameworkClassName) {
+    if (binding.contributionType().isMultibinding()) {
+      return ParameterizedTypeName.get(frameworkClassName, binding.contributedType().getTypeName());
+    }
+
+    // If the binding key type is a Map<K, Provider<V>>, we need to change field type to a raw
+    // type. This is because it actually needs to be changed to Map<K, dagger.internal.Provider<V>>,
+    // but that gets into assignment issues when the field is passed to methods that expect
+    // Map<K, javax.inject.Provider<V>>. We could add casts everywhere, but it is easier to just
+    // make the field itself a raw type.
+    if (MapType.isMapOfProvider(binding.contributedType())) {
+      return frameworkClassName;
+    }
+
+    return ParameterizedTypeName.get(
+        frameworkClassName, binding.key().type().xprocessing().getTypeName());
   }
 
   private static String frameworkFieldName(ContributionBinding binding) {
@@ -104,7 +118,7 @@ public abstract class FrameworkField {
     }
   }
 
-  public abstract ParameterizedTypeName type();
+  public abstract TypeName type();
 
   public abstract String name();
 }

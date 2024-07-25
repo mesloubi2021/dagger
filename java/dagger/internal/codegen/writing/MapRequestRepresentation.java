@@ -38,7 +38,8 @@ import dagger.internal.MapBuilder;
 import dagger.internal.codegen.base.MapType;
 import dagger.internal.codegen.binding.BindingGraph;
 import dagger.internal.codegen.binding.ContributionBinding;
-import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.binding.MapKeys;
+import dagger.internal.codegen.binding.MultiboundMapBinding;
 import dagger.internal.codegen.javapoet.Expression;
 import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.model.BindingKind;
@@ -51,13 +52,15 @@ final class MapRequestRepresentation extends RequestRepresentation {
   private static final int MAX_IMMUTABLE_MAP_OF_KEY_VALUE_PAIRS = 5;
 
   private final XProcessingEnv processingEnv;
-  private final ProvisionBinding binding;
+  private final MultiboundMapBinding binding;
   private final ImmutableMap<DependencyRequest, ContributionBinding> dependencies;
   private final ComponentRequestRepresentations componentRequestRepresentations;
+  private final boolean useLazyClassKey;
+  private final LazyClassKeyProviders lazyClassKeyProviders;
 
   @AssistedInject
   MapRequestRepresentation(
-      @Assisted ProvisionBinding binding,
+      @Assisted MultiboundMapBinding binding,
       XProcessingEnv processingEnv,
       BindingGraph graph,
       ComponentImplementation componentImplementation,
@@ -69,10 +72,29 @@ final class MapRequestRepresentation extends RequestRepresentation {
     this.componentRequestRepresentations = componentRequestRepresentations;
     this.dependencies =
         Maps.toMap(binding.dependencies(), dep -> graph.contributionBinding(dep.key()));
+    this.useLazyClassKey = MapKeys.useLazyClassKey(binding, graph);
+    this.lazyClassKeyProviders =
+        componentImplementation.shardImplementation(binding).getLazyClassKeyProviders();
   }
 
   @Override
   Expression getDependencyExpression(ClassName requestingClass) {
+    MapType mapType = MapType.from(binding.key());
+    Expression dependencyExpression = getUnderlyingMapExpression(requestingClass);
+    // LazyClassKey is backed with a string map, therefore needs to be wrapped.
+    if (useLazyClassKey) {
+      return Expression.create(
+          dependencyExpression.type(),
+          CodeBlock.of(
+              "$T.<$T>of($L)",
+              TypeNames.LAZY_CLASS_KEY_MAP,
+              mapType.valueType().getTypeName(),
+              dependencyExpression.codeBlock()));
+    }
+    return dependencyExpression;
+  }
+
+  private Expression getUnderlyingMapExpression(ClassName requestingClass) {
     // TODO(ronshapiro): We should also make an ImmutableMap version of MapFactory
     boolean isImmutableMapAvailable = isImmutableMapAvailable();
     // TODO(ronshapiro, gak): Use Maps.immutableEnumMap() if it's available?
@@ -84,9 +106,7 @@ final class MapRequestRepresentation extends RequestRepresentation {
               .add(maybeTypeParameters(requestingClass))
               .add(
                   "of($L)",
-                  dependencies
-                      .keySet()
-                      .stream()
+                  dependencies.keySet().stream()
                       .map(dependency -> keyAndValueExpression(dependency, requestingClass))
                       .collect(toParametersCodeBlock()))
               .build());
@@ -101,10 +121,10 @@ final class MapRequestRepresentation extends RequestRepresentation {
                 "singletonMap($L)",
                 keyAndValueExpression(getOnlyElement(dependencies.keySet()), requestingClass)));
       default:
-        CodeBlock.Builder instantiation = CodeBlock.builder();
-        instantiation
-            .add("$T.", isImmutableMapAvailable ? ImmutableMap.class : MapBuilder.class)
-            .add(maybeTypeParameters(requestingClass));
+        CodeBlock.Builder instantiation =
+            CodeBlock.builder()
+                .add("$T.", isImmutableMapAvailable ? ImmutableMap.class : MapBuilder.class)
+                .add(maybeTypeParameters(requestingClass));
         if (isImmutableMapBuilderWithExpectedSizeAvailable()) {
           instantiation.add("builderWithExpectedSize($L)", dependencies.size());
         } else if (isImmutableMapAvailable) {
@@ -132,7 +152,9 @@ final class MapRequestRepresentation extends RequestRepresentation {
   private CodeBlock keyAndValueExpression(DependencyRequest dependency, ClassName requestingClass) {
     return CodeBlock.of(
         "$L, $L",
-        getMapKeyExpression(dependencies.get(dependency), requestingClass, processingEnv),
+        useLazyClassKey
+            ? lazyClassKeyProviders.getMapKeyExpression(dependency.key())
+            : getMapKeyExpression(dependencies.get(dependency), requestingClass, processingEnv),
         componentRequestRepresentations
             .getDependencyExpression(bindingRequest(dependency), requestingClass)
             .codeBlock());
@@ -154,7 +176,9 @@ final class MapRequestRepresentation extends RequestRepresentation {
     MapType mapType = MapType.from(binding.key());
     return isTypeAccessibleFrom(bindingKeyType, requestingClass.packageName())
         ? CodeBlock.of(
-            "<$T, $T>", mapType.keyType().getTypeName(), mapType.valueType().getTypeName())
+            "<$T, $T>",
+            useLazyClassKey ? TypeNames.STRING : mapType.keyType().getTypeName(),
+            mapType.valueType().getTypeName())
         : CodeBlock.of("");
   }
 
@@ -170,6 +194,6 @@ final class MapRequestRepresentation extends RequestRepresentation {
 
   @AssistedFactory
   static interface Factory {
-    MapRequestRepresentation create(ProvisionBinding binding);
+    MapRequestRepresentation create(MultiboundMapBinding binding);
   }
 }

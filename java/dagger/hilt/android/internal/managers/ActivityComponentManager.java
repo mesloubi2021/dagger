@@ -70,6 +70,12 @@ public class ActivityComponentManager implements GeneratedComponentManager<Objec
     return component;
   }
 
+  public final SavedStateHandleHolder getSavedStateHandleHolder() {
+    // This will only be used on base activity that extends ComponentActivity.
+    return ((ActivityRetainedComponentManager) activityRetainedComponentManager)
+        .getSavedStateHandleHolder();
+  }
+
   protected Object createComponent() {
     if (!(activity.getApplication() instanceof GeneratedComponentManager)) {
       throw new IllegalStateException(

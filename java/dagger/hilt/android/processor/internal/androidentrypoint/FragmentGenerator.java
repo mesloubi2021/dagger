@@ -86,7 +86,7 @@ public final class FragmentGenerator {
     Processors.addGeneratedAnnotation(builder, env, getClass());
     Generators.copyLintAnnotations(metadata.element(), builder);
     Generators.copySuppressAnnotations(metadata.element(), builder);
-    Generators.copyConstructors(metadata.baseElement(), builder);
+    Generators.copyConstructors(metadata.baseElement(), builder, metadata.element());
 
     metadata.baseElement().getTypeParameters().stream()
         .map(XTypeParameterElement::getTypeVariableName)

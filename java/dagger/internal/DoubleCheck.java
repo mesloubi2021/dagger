@@ -17,9 +17,9 @@
 package dagger.internal;
 
 import static dagger.internal.Preconditions.checkNotNull;
+import static dagger.internal.Providers.asDaggerProvider;
 
 import dagger.Lazy;
-import javax.inject.Provider;
 
 /**
  * A {@link Lazy} and {@link Provider} implementation that memoizes the value returned from a
@@ -73,7 +73,8 @@ public final class DoubleCheck<T> implements Provider<T>, Lazy<T> {
   /** Returns a {@link Provider} that caches the value from the given delegate provider. */
   // This method is declared this way instead of "<T> Provider<T> provider(Provider<T> delegate)"
   // to work around an Eclipse type inference bug: https://github.com/google/dagger/issues/949.
-  public static <P extends Provider<T>, T> Provider<T> provider(P delegate) {
+  public static <P extends dagger.internal.Provider<T>, T> dagger.internal.Provider<T> provider(
+      P delegate) {
     checkNotNull(delegate);
     if (delegate instanceof DoubleCheck) {
       /* This should be a rare case, but if we have a scoped @Binds that delegates to a scoped
@@ -81,6 +82,16 @@ public final class DoubleCheck<T> implements Provider<T>, Lazy<T> {
       return delegate;
     }
     return new DoubleCheck<T>(delegate);
+  }
+
+  /**
+   * Legacy javax version of the method to support libraries compiled with an older version of
+   * Dagger. Do not use directly.
+   */
+  @Deprecated
+  public static <P extends javax.inject.Provider<T>, T> javax.inject.Provider<T> provider(
+      P delegate) {
+    return provider(asDaggerProvider(delegate));
   }
 
   /** Returns a {@link Lazy} that caches the value from the given provider. */
@@ -98,5 +109,13 @@ public final class DoubleCheck<T> implements Provider<T>, Lazy<T> {
       return lazy;
     }
     return new DoubleCheck<T>(checkNotNull(provider));
+  }
+
+  /**
+   * Legacy javax version of the method to support libraries compiled with an older version of
+   * Dagger. Do not use directly.
+   */
+  public static <P extends javax.inject.Provider<T>, T> Lazy<T> lazy(P provider) {
+    return lazy(asDaggerProvider(provider));
   }
 }

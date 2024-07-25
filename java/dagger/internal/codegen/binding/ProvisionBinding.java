@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 The Dagger Authors.
+ * Copyright (C) 2024 The Dagger Authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,56 +16,21 @@
 
 package dagger.internal.codegen.binding;
 
-import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
-import static dagger.internal.codegen.model.BindingKind.COMPONENT_PROVISION;
-import static dagger.internal.codegen.model.BindingKind.PROVISION;
-
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
-import dagger.internal.codegen.binding.MembersInjectionBinding.InjectionSite;
-import dagger.internal.codegen.compileroption.CompilerOptions;
+import dagger.internal.codegen.base.ContributionType;
 import dagger.internal.codegen.model.BindingKind;
 import dagger.internal.codegen.model.DependencyRequest;
-import dagger.internal.codegen.model.Key;
-import dagger.internal.codegen.model.Scope;
-import java.util.Optional;
 
-/** A value object representing the mechanism by which a {@link Key} can be provided. */
+/** A binding for a {@link BindingKind#PROVISION}. */
 @CheckReturnValue
 @AutoValue
 public abstract class ProvisionBinding extends ContributionBinding {
-
   @Override
-  @Memoized
-  public ImmutableSet<DependencyRequest> explicitDependencies() {
-    return ImmutableSet.<DependencyRequest>builder()
-        .addAll(provisionDependencies())
-        .addAll(membersInjectionDependencies())
-        .build();
+  public BindingKind kind() {
+    return BindingKind.PROVISION;
   }
-
-  /**
-   * Dependencies necessary to invoke an {@code @Inject} constructor or {@code @Provides} method.
-   */
-  public abstract ImmutableSet<DependencyRequest> provisionDependencies();
-
-  @Memoized
-  ImmutableSet<DependencyRequest> membersInjectionDependencies() {
-    return injectionSites()
-        .stream()
-        .flatMap(i -> i.dependencies().stream())
-        .collect(toImmutableSet());
-  }
-
-  /**
-   * {@link InjectionSite}s for all {@code @Inject} members if {@link #kind()} is {@link
-   * BindingKind#INJECTION}, otherwise empty.
-   */
-  public abstract ImmutableSortedSet<InjectionSite> injectionSites();
 
   @Override
   public BindingType bindingType() {
@@ -73,31 +38,9 @@ public abstract class ProvisionBinding extends ContributionBinding {
   }
 
   @Override
-  public abstract Optional<ProvisionBinding> unresolved();
-
-  // TODO(ronshapiro): we should be able to remove this, but AutoValue barks on the Builder's scope
-  // method, saying that the method doesn't correspond to a property of ProvisionBinding
-  @Override
-  public abstract Optional<Scope> scope();
-
-  public static Builder builder() {
-    return new AutoValue_ProvisionBinding.Builder()
-        .nullability(Nullability.NOT_NULLABLE)
-        .provisionDependencies(ImmutableSet.of())
-        .injectionSites(ImmutableSortedSet.of());
-  }
-
-  @Override
-  public abstract Builder toBuilder();
-
-  private static final ImmutableSet<BindingKind> KINDS_TO_CHECK_FOR_NULL =
-      ImmutableSet.of(PROVISION, COMPONENT_PROVISION);
-
-  public boolean shouldCheckForNull(CompilerOptions compilerOptions) {
-    return KINDS_TO_CHECK_FOR_NULL.contains(kind())
-        && !contributedPrimitiveType().isPresent()
-        && !isNullable()
-        && compilerOptions.doCheckForNulls();
+  @Memoized
+  public ContributionType contributionType() {
+    return ContributionType.fromBindingElement(bindingElement().get());
   }
 
   // Profiling determined that this method is called enough times that memoizing it had a measurable
@@ -108,6 +51,9 @@ public abstract class ProvisionBinding extends ContributionBinding {
     return super.requiresModuleInstance();
   }
 
+  @Override
+  public abstract Builder toBuilder();
+
   @Memoized
   @Override
   public abstract int hashCode();
@@ -116,26 +62,15 @@ public abstract class ProvisionBinding extends ContributionBinding {
   @Override
   public abstract boolean equals(Object obj);
 
-  /** A {@link ProvisionBinding} builder. */
-  @AutoValue.Builder
-  public abstract static class Builder
-      extends ContributionBinding.Builder<ProvisionBinding, Builder> {
-
-    @CanIgnoreReturnValue
-    @Override
-    public Builder dependencies(Iterable<DependencyRequest> dependencies) {
-      return provisionDependencies(dependencies);
-    }
-
-    abstract Builder provisionDependencies(Iterable<DependencyRequest> provisionDependencies);
-
-    public abstract Builder injectionSites(ImmutableSortedSet<InjectionSite> injectionSites);
-
-    @CanIgnoreReturnValue // TODO(kak): remove this once open-source checkers understand AutoValue
-    @Override
-    public abstract Builder unresolved(ProvisionBinding unresolved);
-
-    public abstract Builder scope(Optional<Scope> scope);
+  static Builder builder() {
+    return new AutoValue_ProvisionBinding.Builder();
   }
 
+  /** A {@link ProvisionBinding} builder. */
+  @AutoValue.Builder
+  abstract static class Builder extends ContributionBinding.Builder<ProvisionBinding, Builder> {
+    abstract Builder nullability(Nullability nullability);
+
+    abstract Builder dependencies(Iterable<DependencyRequest> dependencies);
+  }
 }

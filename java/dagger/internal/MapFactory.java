@@ -17,12 +17,12 @@
 package dagger.internal;
 
 import static dagger.internal.DaggerCollections.newLinkedHashMapWithExpectedSize;
+import static dagger.internal.Providers.asDaggerProvider;
 import static java.util.Collections.unmodifiableMap;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
-import javax.inject.Provider;
 
 /**
  * A {@link Factory} implementation used to implement {@link Map} bindings. This factory returns a
@@ -72,10 +72,28 @@ public final class MapFactory<K, V> extends AbstractMapFactory<K, V, V> {
       return this;
     }
 
+    /**
+     * Legacy javax version of the method to support libraries compiled with an older version of
+     * Dagger. Do not use directly.
+     */
+    @Deprecated
+    public Builder<K, V> put(K key, javax.inject.Provider<V> providerOfValue) {
+      return put(key, asDaggerProvider(providerOfValue));
+    }
+
     @Override
     public Builder<K, V> putAll(Provider<Map<K, V>> mapFactory) {
       super.putAll(mapFactory);
       return this;
+    }
+
+    /**
+     * Legacy javax version of the method to support libraries compiled with an older version of
+     * Dagger. Do not use directly.
+     */
+    @Deprecated
+    public Builder<K, V> putAll(javax.inject.Provider<Map<K, V>> mapFactory) {
+      return putAll(asDaggerProvider(mapFactory));
     }
 
     /** Returns a new {@link MapProviderFactory}. */

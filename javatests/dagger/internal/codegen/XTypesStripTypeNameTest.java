@@ -187,12 +187,13 @@ public class XTypesStripTypeNameTest {
   private static void runTest(Source source, Function<XTestInvocation, Void> handler) {
     runProcessorTest(
         ImmutableList.of(source),
-        /* classpath = */ ImmutableList.of(),
-        /* options = */ ImmutableMap.of(),
-        /* javacArguments = */ ImmutableList.of(),
-        /* kotlincArguments = */ ImmutableList.of(),
-        /* config = */ new XProcessingEnvConfig.Builder().build(),
-        /* handler = */ invocation -> {
+        /* classpath= */ ImmutableList.of(),
+        /* options= */ ImmutableMap.of(),
+        /* javacArguments= */ ImmutableList.of(),
+        /* kotlincArguments= */ ImmutableList.of(
+            ),
+        /* config= */ new XProcessingEnvConfig.Builder().build(),
+        /* handler= */ invocation -> {
           handler.apply(invocation);
           return null;
         });

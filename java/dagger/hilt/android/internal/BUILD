@@ -21,6 +21,7 @@ android_library(
     name = "internal",
     srcs = [
         "Contexts.java",
+        "OnReceiveBytecodeInjectionMarker.java",
         "ThreadUtil.java",
     ],
 )

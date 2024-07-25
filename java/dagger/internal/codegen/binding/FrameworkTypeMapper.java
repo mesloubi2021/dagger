@@ -19,12 +19,10 @@ package dagger.internal.codegen.binding;
 import static dagger.internal.codegen.binding.BindingType.PRODUCTION;
 
 import dagger.internal.codegen.model.RequestKind;
-import dagger.producers.Producer;
-import javax.inject.Provider;
 
 /**
  * A mapper for associating a {@link RequestKind} to a {@link FrameworkType}, dependent on the type
- * of code to be generated (e.g., for {@link Provider} or {@link Producer}).
+ * of code to be generated (e.g., for {@code Provider} or {@code Producer}).
  */
 public enum FrameworkTypeMapper {
   FOR_PROVIDER() {

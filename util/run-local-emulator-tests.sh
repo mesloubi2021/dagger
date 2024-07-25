@@ -8,6 +8,9 @@ adb logcat *:S TestRunner:V & LOGCAT_PID=$!
 readonly GRADLE_PROJECTS=(
     "javatests/artifacts/hilt-android/simple"
     "javatests/artifacts/hilt-android/simpleKotlin"
+    "javatests/artifacts/hilt-android/viewmodel"
+    "javatests/artifacts/hilt-android/lazyclasskey"
+    "javatests/artifacts/dagger/lazyclasskey"
 )
 for project in "${GRADLE_PROJECTS[@]}"; do
     echo "Running gradle Android emulator tests for $project"

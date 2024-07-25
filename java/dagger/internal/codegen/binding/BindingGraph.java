@@ -149,7 +149,7 @@ public abstract class BindingGraph {
 
     /** Returns the set of strongly connected nodes in this graph in reverse topological order. */
     @Memoized
-    public ImmutableSet<ImmutableSet<Node>> stronglyConnectedNodes() {
+    public ImmutableList<ImmutableSet<Node>> stronglyConnectedNodes() {
       return TarjanSCCs.<Node>compute(
           ImmutableSet.copyOf(network().nodes()),
           // NetworkBuilder does not have a stable successor order, so we have to roll our own
@@ -212,14 +212,7 @@ public abstract class BindingGraph {
     // particular BindingNode.
     Map<Key, BindingNode> contributionBindings = new LinkedHashMap<>();
     Map<Key, BindingNode> membersInjectionBindings = new LinkedHashMap<>();
-
-    // Construct the maps of the ContributionBindings and MembersInjectionBindings by iterating
-    // bindings from this component and then from each successive parent. If a binding exists in
-    // multple components, this order ensures that the child-most binding is always chosen first.
-    Stream.iterate(componentNode.componentPath(), ComponentPath::parent)
-        // Stream.iterate is inifinte stream so we need limit it to the known size of the path.
-        .limit(componentNode.componentPath().components().size())
-        .flatMap(path -> topLevelBindingGraph.bindingsByComponent().get(path).stream())
+    topLevelBindingGraph.bindingsByComponent().get(componentNode.componentPath())
         .forEach(
             bindingNode -> {
               if (bindingNode.delegate() instanceof ContributionBinding) {
@@ -233,16 +226,19 @@ public abstract class BindingGraph {
 
     BindingGraph bindingGraph = new AutoValue_BindingGraph(componentNode, topLevelBindingGraph);
 
-    ImmutableSet<ModuleDescriptor> modules =
-        ((ComponentNodeImpl) componentNode).componentDescriptor().modules();
+    ImmutableSet<XTypeElement> modules =
+        ((ComponentNodeImpl) componentNode).componentDescriptor().modules().stream()
+            .map(ModuleDescriptor::moduleElement)
+            .collect(toImmutableSet());
 
-    ImmutableSet<ModuleDescriptor> inheritedModules =
+    ImmutableSet<XTypeElement> inheritedModules =
         parent.isPresent()
             ? Sets.union(parent.get().ownedModules, parent.get().inheritedModules).immutableCopy()
             : ImmutableSet.of();
 
     // Set these fields directly on the instance rather than passing these in as input to the
     // AutoValue to prevent exposing this data outside of the class.
+    bindingGraph.parent = parent;
     bindingGraph.inheritedModules = inheritedModules;
     bindingGraph.ownedModules = Sets.difference(modules, inheritedModules).immutableCopy();
     bindingGraph.contributionBindings = ImmutableMap.copyOf(contributionBindings);
@@ -257,10 +253,11 @@ public abstract class BindingGraph {
     return bindingGraph;
   }
 
+  private Optional<BindingGraph> parent;
   private ImmutableMap<Key, BindingNode> contributionBindings;
   private ImmutableMap<Key, BindingNode> membersInjectionBindings;
-  private ImmutableSet<ModuleDescriptor> inheritedModules;
-  private ImmutableSet<ModuleDescriptor> ownedModules;
+  private ImmutableSet<XTypeElement> inheritedModules;
+  private ImmutableSet<XTypeElement> ownedModules;
   private ImmutableSet<XTypeElement> bindingModules;
 
   BindingGraph() {}
@@ -287,9 +284,7 @@ public abstract class BindingGraph {
    */
   public final Optional<Binding> localContributionBinding(Key key) {
     return contributionBindings.containsKey(key)
-        ? Optional.of(contributionBindings.get(key))
-            .filter(bindingNode -> bindingNode.componentPath().equals(componentPath()))
-            .map(BindingNode::delegate)
+        ? Optional.of(contributionBindings.get(key).delegate())
         : Optional.empty();
   }
 
@@ -299,15 +294,18 @@ public abstract class BindingGraph {
    */
   public final Optional<Binding> localMembersInjectionBinding(Key key) {
     return membersInjectionBindings.containsKey(key)
-        ? Optional.of(membersInjectionBindings.get(key))
-            .filter(bindingNode -> bindingNode.componentPath().equals(componentPath()))
-            .map(BindingNode::delegate)
+        ? Optional.of(membersInjectionBindings.get(key).delegate())
         : Optional.empty();
   }
 
   /** Returns the {@link ContributionBinding} for the given {@link Key}. */
   public final ContributionBinding contributionBinding(Key key) {
-    return (ContributionBinding) contributionBindings.get(key).delegate();
+    if (contributionBindings.containsKey(key)) {
+      return (ContributionBinding) contributionBindings.get(key).delegate();
+    } else if (parent.isPresent()) {
+      return parent.get().contributionBinding(key);
+    }
+    throw new AssertionError("Contribution binding not found for key: " + key);
   }
 
   /**
@@ -315,9 +313,12 @@ public abstract class BindingGraph {
    * Optional#empty()} if one does not exist.
    */
   public final Optional<MembersInjectionBinding> membersInjectionBinding(Key key) {
-    return membersInjectionBindings.containsKey(key)
-        ? Optional.of((MembersInjectionBinding) membersInjectionBindings.get(key).delegate())
-        : Optional.empty();
+    if (membersInjectionBindings.containsKey(key)) {
+      return Optional.of((MembersInjectionBinding) membersInjectionBindings.get(key).delegate());
+    } else if (parent.isPresent()) {
+      return parent.get().membersInjectionBinding(key);
+    }
+    return Optional.empty();
   }
 
   /** Returns the {@link XTypeElement} for the component this graph represents. */
@@ -334,9 +335,7 @@ public abstract class BindingGraph {
    * ancestors.
    */
   public final ImmutableSet<XTypeElement> ownedModuleTypes() {
-    return ownedModules.stream()
-        .map(ModuleDescriptor::moduleElement)
-        .collect(toImmutableSet());
+    return ownedModules;
   }
 
   /**
@@ -394,7 +393,7 @@ public abstract class BindingGraph {
     ImmutableSet<XTypeElement> requiredModules =
         stream(Traverser.forTree(BindingGraph::subgraphs).depthFirstPostOrder(this))
             .flatMap(graph -> graph.bindingModules.stream())
-            .filter(ownedModuleTypes()::contains)
+            .filter(ownedModules::contains)
             .collect(toImmutableSet());
     ImmutableSet.Builder<ComponentRequirement> requirements = ImmutableSet.builder();
     componentDescriptor().requirements().stream()
@@ -433,11 +432,18 @@ public abstract class BindingGraph {
     return topLevelBindingGraph().bindingsByComponent().get(componentPath());
   }
 
-  @Memoized
+  // TODO(bcorso): This method can be costly. Consider removing this method and inlining it into its
+  // only usage, BindingGraphJsonGenerator.
   public ImmutableSet<BindingNode> bindingNodes() {
-    return ImmutableSet.<BindingNode>builder()
-        .addAll(contributionBindings.values())
-        .addAll(membersInjectionBindings.values())
-        .build();
+    // Construct the set of bindings by iterating bindings from this component and then from each
+    // successive parent. If a binding exists in multiple components, this order ensures that the
+    // child-most binding is always chosen first.
+    Map<Key, BindingNode> bindings = new LinkedHashMap<>();
+    Stream.iterate(componentPath(), ComponentPath::parent)
+        // Stream.iterate() is infinite stream so we need limit it to the known size of the path.
+        .limit(componentPath().components().size())
+        .flatMap(path -> topLevelBindingGraph().bindingsByComponent().get(path).stream())
+        .forEach(bindingNode -> bindings.putIfAbsent(bindingNode.key(), bindingNode));
+    return ImmutableSet.copyOf(bindings.values());
   }
 }

@@ -46,6 +46,10 @@
         android:exported="false"
         tools:ignore="MissingClass"/>
     <activity
+        android:name=".PackagePrivateConstructorTest$TestActivity"
+        android:exported="false"
+        tools:ignore="MissingClass"/>
+    <activity
         android:name=".QualifierInKotlinFieldsTest$TestActivity"
         android:exported="false"
         tools:ignore="MissingClass"/>
@@ -91,6 +95,10 @@
         tools:ignore="MissingClass"/>
     <activity
         android:name=".ViewModelSavedStateOwnerTest$TestActivity"
+        android:exported="false"
+        tools:ignore="MissingClass"/>
+    <activity
+        android:name=".ViewModelSavedStateOwnerTest$ErrorTestActivity"
         android:exported="false"
         tools:ignore="MissingClass"/>
     <activity

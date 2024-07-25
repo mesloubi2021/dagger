@@ -16,6 +16,7 @@
 
 package dagger.internal.codegen.validation;
 
+import static androidx.room.compiler.processing.XElementKt.isMethod;
 import static androidx.room.compiler.processing.compat.XConverters.getProcessingEnv;
 import static androidx.room.compiler.processing.compat.XConverters.toJavac;
 import static androidx.room.compiler.processing.compat.XConverters.toKS;
@@ -46,7 +47,8 @@ import com.google.devtools.ksp.processing.SymbolProcessorEnvironment;
 import com.google.devtools.ksp.symbol.KSAnnotated;
 import com.google.devtools.ksp.symbol.KSAnnotation;
 import com.google.devtools.ksp.symbol.KSClassDeclaration;
-import com.google.devtools.ksp.symbol.KSFunctionDeclaration;
+import com.google.devtools.ksp.symbol.KSDeclaration;
+import com.google.devtools.ksp.symbol.KSPropertyDeclaration;
 import com.google.devtools.ksp.symbol.KSType;
 import dagger.internal.codegen.xprocessing.XAnnotations;
 import dagger.internal.codegen.xprocessing.XElements;
@@ -575,9 +577,12 @@ public final class SpiModelBindingGraphConverter {
     }
 
     @Override
-    public KSFunctionDeclaration ksp() {
+    public KSDeclaration ksp() {
       checkIsKsp(backend());
-      return toKS(executableElement());
+      return isMethod(executableElement())
+              && XElements.asMethod(executableElement()).isKotlinPropertyMethod()
+          ? (KSPropertyDeclaration) toKS((XElement) executableElement())
+          : toKS(executableElement());
     }
 
     @Override

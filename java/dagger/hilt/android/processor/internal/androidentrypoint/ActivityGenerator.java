@@ -16,22 +16,58 @@
 
 package dagger.hilt.android.processor.internal.androidentrypoint;
 
+import static com.google.common.base.Preconditions.checkState;
+import static dagger.internal.codegen.extension.DaggerStreams.toImmutableList;
+import static kotlin.streams.jdk8.StreamsKt.asStream;
+
 import androidx.room.compiler.processing.JavaPoetExtKt;
+import androidx.room.compiler.processing.XAnnotated;
+import androidx.room.compiler.processing.XExecutableParameterElement;
 import androidx.room.compiler.processing.XFiler;
+import androidx.room.compiler.processing.XMethodElement;
 import androidx.room.compiler.processing.XProcessingEnv;
 import androidx.room.compiler.processing.XTypeParameterElement;
+import com.google.common.base.CaseFormat;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import dagger.hilt.android.processor.internal.AndroidClassNames;
+import dagger.hilt.processor.internal.ClassNames;
+import dagger.hilt.processor.internal.MethodSignature;
 import dagger.hilt.processor.internal.Processors;
+import dagger.internal.codegen.xprocessing.XElements;
 import java.io.IOException;
 import javax.lang.model.element.Modifier;
+import javax.tools.Diagnostic;
 
 /** Generates an Hilt Activity class for the @AndroidEntryPoint annotated class. */
 public final class ActivityGenerator {
+  private enum ActivityMethod {
+    ON_CREATE(AndroidClassNames.BUNDLE),
+    ON_STOP(),
+    ON_DESTROY();
+
+    @SuppressWarnings("ImmutableEnumChecker")
+    private final MethodSignature signature;
+
+    ActivityMethod(TypeName... parameterTypes) {
+      String methodName = CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, name());
+      this.signature = MethodSignature.of(methodName, parameterTypes);
+    }
+  }
+
+  private static final FieldSpec SAVED_STATE_HANDLE_HOLDER_FIELD =
+      FieldSpec.builder(AndroidClassNames.SAVED_STATE_HANDLE_HOLDER, "savedStateHandleHolder")
+          .addModifiers(Modifier.PRIVATE)
+          .build();
+
   private final XProcessingEnv env;
   private final AndroidEntryPointMetadata metadata;
   private final ClassName generatedClassName;
@@ -59,8 +95,16 @@ public final class ActivityGenerator {
       Generators.copyConstructors(
           metadata.baseElement(),
           CodeBlock.builder().addStatement("_initHiltInternal()").build(),
-          builder);
+          builder,
+          metadata.element());
       builder.addMethod(init());
+      if (!metadata.overridesAndroidEntryPointClass()) {
+        builder
+            .addField(SAVED_STATE_HANDLE_HOLDER_FIELD)
+            .addMethod(initSavedStateHandleHolderMethod())
+            .addMethod(onCreateComponentActivity())
+            .addMethod(onDestroyComponentActivity());
+      }
 
     metadata.baseElement().getTypeParameters().stream()
         .map(XTypeParameterElement::getTypeVariableName)
@@ -132,5 +176,120 @@ public final class ActivityGenerator {
             "return $T.getActivityFactory(this, super.getDefaultViewModelProviderFactory())",
             AndroidClassNames.DEFAULT_VIEW_MODEL_FACTORIES)
         .build();
+  }
+
+  // @Override
+  // public void onCreate(Bundle bundle) {
+  //   super.onCreate(savedInstanceState);
+  //   initSavedStateHandleHolder();
+  // }
+  //
+  private MethodSpec onCreateComponentActivity() {
+    XMethodElement nearestOverrideMethod =
+        requireNearestOverrideMethod(ActivityMethod.ON_CREATE, metadata);
+    if (nearestOverrideMethod.isFinal()) {
+      env.getMessager()
+          .printMessage(
+              Diagnostic.Kind.ERROR,
+              "Do not mark onCreate as final in base Activity class, as Hilt needs to override it"
+                  + " to inject SavedStateHandle.",
+              nearestOverrideMethod);
+    }
+    ParameterSpec.Builder parameterBuilder =
+        ParameterSpec.builder(AndroidClassNames.BUNDLE, "savedInstanceState");
+    MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("onCreate");
+    // If the sub class is overriding onCreate with @Nullable parameter, then this generated
+    // method will also prefix the parameter with @Nullable.
+    if (isNullable(nearestOverrideMethod.getParameters().get(0))) {
+      parameterBuilder.addAnnotation(AndroidClassNames.NULLABLE);
+    }
+    if (nearestOverrideMethod.hasAnnotation(AndroidClassNames.UI_THREAD)) {
+      methodBuilder.addAnnotation(AndroidClassNames.UI_THREAD);
+    }
+    return methodBuilder
+        .addAnnotation(AndroidClassNames.CALL_SUPER)
+        .addAnnotation(Override.class)
+        .addModifiers(XElements.getModifiers(nearestOverrideMethod))
+        .addParameter(parameterBuilder.build())
+        .addStatement("super.onCreate(savedInstanceState)")
+        .addStatement("initSavedStateHandleHolder()")
+        .build();
+  }
+
+  // private void initSavedStateHandleHolder() {
+  //   savedStateHandleHolder = componentManager().getSavedStateHandleHolder();
+  //   if (savedStateHandleHolder.isInvalid()) {
+  //     savedStateHandleHolder.setExtras(getDefaultViewModelCreationExtras());
+  //   }
+  // }
+  private static MethodSpec initSavedStateHandleHolderMethod() {
+    return MethodSpec.methodBuilder("initSavedStateHandleHolder")
+        .addModifiers(Modifier.PRIVATE)
+        .beginControlFlow(
+            "if (getApplication() instanceof $T)", ClassNames.GENERATED_COMPONENT_MANAGER)
+        .addStatement(
+            "$N = componentManager().getSavedStateHandleHolder()", SAVED_STATE_HANDLE_HOLDER_FIELD)
+        .beginControlFlow("if ($N.isInvalid())", SAVED_STATE_HANDLE_HOLDER_FIELD)
+        .addStatement(
+            "$N.setExtras(getDefaultViewModelCreationExtras())", SAVED_STATE_HANDLE_HOLDER_FIELD)
+        .endControlFlow()
+        .endControlFlow()
+        .build();
+  }
+
+  private static boolean isNullable(XExecutableParameterElement element) {
+    return hasNullableAnnotation(element) || hasNullableAnnotation(element.getType());
+  }
+
+  private static boolean hasNullableAnnotation(XAnnotated element) {
+    return element.getAllAnnotations().stream()
+        .anyMatch(annotation -> annotation.getClassName().simpleName().equals("Nullable"));
+  }
+
+  // @Override
+  // public void onDestroy() {
+  //   super.onDestroy();
+  //   if (savedStateHandleHolder != null) {
+  //     savedStateHandleHolder.clear();
+  //   }
+  // }
+  private MethodSpec onDestroyComponentActivity() {
+    XMethodElement nearestOverrideMethod =
+        requireNearestOverrideMethod(ActivityMethod.ON_DESTROY, metadata);
+    if (nearestOverrideMethod.isFinal()) {
+      env.getMessager()
+          .printMessage(
+              Diagnostic.Kind.ERROR,
+              "Do not mark onDestroy as final in base Activity class, as Hilt needs to override it"
+                  + " to clean up SavedStateHandle.",
+              nearestOverrideMethod);
+    }
+    return MethodSpec.methodBuilder("onDestroy")
+        .addAnnotation(Override.class)
+        .addModifiers(XElements.getModifiers(nearestOverrideMethod))
+        .addStatement("super.onDestroy()")
+        .beginControlFlow("if ($N != null)", SAVED_STATE_HANDLE_HOLDER_FIELD)
+        .addStatement("$N.clear()", SAVED_STATE_HANDLE_HOLDER_FIELD)
+        .endControlFlow()
+        .build();
+  }
+
+  private static XMethodElement requireNearestOverrideMethod(
+      ActivityMethod activityMethod, AndroidEntryPointMetadata metadata) {
+    XMethodElement methodOnAndroidEntryPointElement =
+        metadata.element().getDeclaredMethods().stream()
+            .filter(method -> MethodSignature.of(method).equals(activityMethod.signature))
+            .findFirst()
+            .orElse(null);
+    if (methodOnAndroidEntryPointElement != null) {
+      return methodOnAndroidEntryPointElement;
+    }
+
+    ImmutableList<XMethodElement> methodOnBaseElement =
+        asStream(metadata.baseElement().getAllMethods())
+            .filter(method -> MethodSignature.of(method).equals(activityMethod.signature))
+            .collect(toImmutableList());
+    checkState(methodOnBaseElement.size() >= 1);
+    return Iterables.getLast(methodOnBaseElement);
   }
 }

@@ -3,9 +3,9 @@ package test;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.MapProviderFactory;
 import dagger.internal.Preconditions;
+import dagger.internal.Provider;
 import java.util.Map;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -16,7 +16,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -66,7 +68,7 @@ final class DaggerTestComponent {
 
     private Provider<Handler> provideLoginHandlerProvider;
 
-    private Provider<Map<PathEnum, Provider<Handler>>> mapOfPathEnumAndProviderOfHandlerProvider;
+    private Provider mapOfPathEnumAndProviderOfHandlerProvider;
 
     private TestComponentImpl(MapModuleOne mapModuleOneParam, MapModuleTwo mapModuleTwoParam) {
 
@@ -83,7 +85,7 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<Map<PathEnum, Provider<Handler>>> dispatcher() {
+    public javax.inject.Provider<Map<PathEnum, javax.inject.Provider<Handler>>> dispatcher() {
       return mapOfPathEnumAndProviderOfHandlerProvider;
     }
   }

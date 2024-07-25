@@ -47,6 +47,7 @@ import androidx.room.compiler.processing.XProcessingEnv;
 import androidx.room.compiler.processing.XTypeElement;
 import androidx.room.compiler.processing.XTypeParameterElement;
 import androidx.room.compiler.processing.XVariableElement;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.ksp.symbol.KSAnnotated;
 import com.squareup.javapoet.ClassName;
@@ -54,6 +55,7 @@ import java.util.Collection;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.Modifier;
 
 // TODO(bcorso): Consider moving these methods into XProcessing library.
 /** A utility class for {@link XElement} helper methods. */
@@ -327,16 +329,22 @@ public final class XElements {
         return asTypeElement(element).getQualifiedName();
       } else if (isExecutable(element)) {
         XExecutableElement executable = asExecutable(element);
+        // TODO(b/318709946) resolving ksp types can be expensive, therefore we should avoid it
+        // here for extreme cases until ksp improved the performance.
+        boolean tooManyParameters =
+            getProcessingEnv(element).getBackend().equals(XProcessingEnv.Backend.KSP)
+                && executable.getParameters().size() > 10;
         return String.format(
             "%s(%s)",
             getSimpleName(
-                isConstructor(element)
-                    ? asConstructor(element).getEnclosingElement()
-                    : executable),
-            executable.getParameters().stream()
-                .map(XExecutableParameterElement::getType)
-                .map(XTypes::toStableString)
-                .collect(joining(",")));
+                isConstructor(element) ? asConstructor(element).getEnclosingElement() : executable),
+            (tooManyParameters
+                    ? executable.getParameters().stream().limit(10)
+                    : executable.getParameters().stream()
+                        .map(XExecutableParameterElement::getType)
+                        .map(XTypes::toStableString)
+                        .collect(joining(",")))
+                + (tooManyParameters ? ", ..." : ""));
       } else if (isEnumEntry(element)
                      || isField(element)
                      || isMethodParameter(element)
@@ -381,6 +389,38 @@ public final class XElements {
 
   public static String packageName(XElement element) {
     return element.getClosestMemberContainer().asClassName().getPackageName();
+  }
+
+  public static boolean isFinal(XExecutableElement element) {
+    if (element.isFinal()) {
+      return true;
+    }
+    if (getProcessingEnv(element).getBackend() == XProcessingEnv.Backend.KSP) {
+      if (toKS(element).getModifiers().contains(com.google.devtools.ksp.symbol.Modifier.FINAL)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public static ImmutableList<Modifier> getModifiers(XExecutableElement element) {
+    ImmutableList.Builder<Modifier> builder = ImmutableList.builder();
+    if (isFinal(element)) {
+      builder.add(Modifier.FINAL);
+    } else if (element.isAbstract()) {
+      builder.add(Modifier.ABSTRACT);
+    }
+    if (element.isStatic()) {
+      builder.add(Modifier.STATIC);
+    }
+    if (element.isPublic()) {
+      builder.add(Modifier.PUBLIC);
+    } else if (element.isPrivate()) {
+      builder.add(Modifier.PRIVATE);
+    } else if (element.isProtected()) {
+      builder.add(Modifier.PROTECTED);
+    }
+    return builder.build();
   }
 
   private XElements() {}

@@ -22,6 +22,8 @@ import com.squareup.javapoet.ClassName;
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
+import dagger.internal.codegen.binding.BoundInstanceBinding;
+import dagger.internal.codegen.binding.ComponentDependencyBinding;
 import dagger.internal.codegen.binding.ComponentRequirement;
 import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.javapoet.Expression;
@@ -52,8 +54,16 @@ final class ComponentRequirementRequestRepresentation extends RequestRepresentat
   }
 
   @AssistedFactory
-  static interface Factory {
-    ComponentRequirementRequestRepresentation create(
+  abstract static class Factory {
+    abstract ComponentRequirementRequestRepresentation create(
         ContributionBinding binding, ComponentRequirement componentRequirement);
+
+    final ComponentRequirementRequestRepresentation create(BoundInstanceBinding binding) {
+      return create(binding, ComponentRequirement.forBoundInstance(binding));
+    }
+
+    final ComponentRequirementRequestRepresentation create(ComponentDependencyBinding binding) {
+      return create(binding, ComponentRequirement.forDependency(binding));
+    }
   }
 }

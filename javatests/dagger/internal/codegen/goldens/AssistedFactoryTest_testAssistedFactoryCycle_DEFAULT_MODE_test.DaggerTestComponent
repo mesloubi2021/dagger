@@ -2,8 +2,8 @@ package test;
 
 import dagger.internal.DaggerGenerated;
 import dagger.internal.DelegateFactory;
+import dagger.internal.Provider;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -14,7 +14,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -57,7 +59,7 @@ final class DaggerTestComponent {
       this.fooFactoryProvider = new DelegateFactory<>();
       this.barProvider = Bar_Factory.create(fooFactoryProvider);
       this.fooProvider = Foo_Factory.create(barProvider);
-      DelegateFactory.setDelegate(fooFactoryProvider, FooFactory_Impl.create(fooProvider));
+      DelegateFactory.setDelegate(fooFactoryProvider, FooFactory_Impl.createFactoryProvider(fooProvider));
     }
 
     @Override

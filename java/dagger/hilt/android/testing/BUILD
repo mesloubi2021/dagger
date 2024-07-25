@@ -15,7 +15,7 @@
 #   Testing libraries for Hilt Android.
 
 load("//:build_defs.bzl", "POM_VERSION")
-load("//tools:maven.bzl", "gen_maven_artifact")
+load("//tools/maven:maven.bzl", "gen_maven_artifact")
 
 package(default_visibility = ["//:src"])
 
@@ -168,6 +168,15 @@ android_library(
     ],
 )
 
+android_library(
+    name = "skip_test_injection",
+    testonly = 1,
+    srcs = ["SkipTestInjection.java"],
+    deps = [
+        ":package_info",
+    ],
+)
+
 java_library(
     name = "package_info",
     srcs = ["package-info.java"],
@@ -220,6 +229,7 @@ gen_maven_artifact(
     artifact_target_maven_deps = [
         "androidx.activity:activity",
         "androidx.annotation:annotation",
+        "androidx.annotation:annotation-experimental",
         "androidx.fragment:fragment",
         "androidx.lifecycle:lifecycle-common",
         "androidx.lifecycle:lifecycle-viewmodel",

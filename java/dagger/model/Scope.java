@@ -26,7 +26,6 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Equivalence;
 import com.squareup.javapoet.ClassName;
 import dagger.Reusable;
-import dagger.producers.ProductionScope;
 import javax.inject.Singleton;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.TypeElement;
@@ -88,7 +87,7 @@ public abstract class Scope {
     return isScope(REUSABLE);
   }
 
-  /** Returns {@code true} if this scope is the {@link ProductionScope @ProductionScope} scope. */
+  /** Returns {@code true} if this scope is the {@code @ProductionScope} scope. */
   public final boolean isProductionScope() {
     return isScope(PRODUCTION_SCOPE);
   }

@@ -71,4 +71,108 @@ public class ActivityGeneratorTest {
     HiltCompilerTests.hiltCompiler(baseActivity, myActivity)
         .compile(subject -> subject.hasErrorCount(0));
   }
+
+  @Test
+  public void baseActivityHasFinalOnDestroy_fails() {
+    Source myActivity =
+        HiltCompilerTests.javaSource(
+            "test.MyActivity",
+            "package test;",
+            "",
+            "import dagger.hilt.android.AndroidEntryPoint;",
+            "",
+            "@AndroidEntryPoint(BaseActivity.class)",
+            "public class MyActivity extends Hilt_MyActivity {}");
+    Source baseActivity =
+        HiltCompilerTests.javaSource(
+            "test.BaseActivity",
+            "package test;",
+            "",
+            "import androidx.activity.ComponentActivity;",
+            "",
+            "public class BaseActivity extends ComponentActivity {",
+            "   @Override public final void onDestroy() {}",
+            "}");
+    HiltCompilerTests.hiltCompiler(myActivity, baseActivity)
+        .compile(
+            subject -> {
+              // TODO(b/319663779) make error count consistent.
+              // subject.hasErrorCount(1);
+              subject.hasErrorContaining(
+                  "Do not mark onDestroy as final in base Activity class, as Hilt needs to override"
+                      + " it to clean up SavedStateHandle");
+            });
+  }
+
+  @Test
+  public void baseActivityHasFinalOnCreate_fails() {
+    Source myActivity =
+        HiltCompilerTests.javaSource(
+            "test.MyActivity",
+            "package test;",
+            "",
+            "import dagger.hilt.android.AndroidEntryPoint;",
+            "",
+            "@AndroidEntryPoint(BaseActivity.class)",
+            "public class MyActivity extends Hilt_MyActivity {}");
+    Source baseActivity =
+        HiltCompilerTests.javaSource(
+            "test.BaseActivity",
+            "package test;",
+            "",
+            "import android.os.Bundle;",
+            "import androidx.activity.ComponentActivity;",
+            "",
+            "public class BaseActivity extends ComponentActivity {",
+            "   @Override public final void onCreate(Bundle bundle) {}",
+            "}");
+    HiltCompilerTests.hiltCompiler(myActivity, baseActivity)
+        .compile(
+            subject -> {
+              // TODO(b/319663779) make error count consistent.
+              // subject.hasErrorCount(1);
+              subject.hasErrorContaining(
+                  "Do not mark onCreate as final in base Activity class, as Hilt needs to override"
+                      + " it to inject SavedStateHandle");
+            });
+  }
+
+  @Test
+  public void secondBaseActivityHasFinalOnCreate_fails() {
+    Source myActivity =
+        HiltCompilerTests.javaSource(
+            "test.MyActivity",
+            "package test;",
+            "",
+            "import dagger.hilt.android.AndroidEntryPoint;",
+            "",
+            "@AndroidEntryPoint(BaseActivity.class)",
+            "public class MyActivity extends Hilt_MyActivity {}");
+    Source baseActivity =
+        HiltCompilerTests.javaSource(
+            "test.BaseActivity",
+            "package test;",
+            "",
+            "public class BaseActivity extends BaseActivity2 {}");
+    Source baseActivity2 =
+        HiltCompilerTests.javaSource(
+            "test.BaseActivity2",
+            "package test;",
+            "",
+            "import android.os.Bundle;",
+            "import androidx.activity.ComponentActivity;",
+            "",
+            "public class BaseActivity2 extends ComponentActivity {",
+            "   @Override public final void onCreate(Bundle bundle) {}",
+            "}");
+    HiltCompilerTests.hiltCompiler(myActivity, baseActivity, baseActivity2)
+        .compile(
+            subject -> {
+              // TODO(b/319663779) make error count consistent.
+              // subject.hasErrorCount(1);
+              subject.hasErrorContaining(
+                  "Do not mark onCreate as final in base Activity class, as Hilt needs to override"
+                      + " it to inject SavedStateHandle");
+            });
+  }
 }

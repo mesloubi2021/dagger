@@ -68,10 +68,13 @@ final class InjectionSiteFactory {
       XTypeElement typeElement = currentType.get().getTypeElement();
       enclosingTypeElementOrder.put(typeElement, enclosingTypeElementOrder.size());
       for (XElement enclosedElement : typeElement.getEnclosedElements()) {
-        enclosedElementOrder.put(enclosedElement, enclosedElementOrder.size());
         injectionSiteVisitor
             .visit(enclosedElement, currentType.get())
-            .ifPresent(injectionSites::add);
+            .ifPresent(
+                injectionSite -> {
+                  enclosedElementOrder.put(enclosedElement, enclosedElementOrder.size());
+                  injectionSites.add(injectionSite);
+                });
       }
     }
     return ImmutableSortedSet.copyOf(

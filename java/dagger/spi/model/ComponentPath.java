@@ -39,8 +39,7 @@ public abstract class ComponentPath {
   public abstract ImmutableList<DaggerTypeElement> components();
 
   /**
-   * Returns the root {@link dagger.Component}- or {@link
-   * dagger.producers.ProductionComponent}-annotated type
+   * Returns the root {@code Component}- or {@code ProductionComponent}-annotated type
    */
   public final DaggerTypeElement rootComponent() {
     return components().get(0);

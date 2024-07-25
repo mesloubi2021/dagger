@@ -36,10 +36,9 @@ import javax.inject.Inject;
  */
 public interface InjectBindingRegistry {
   /**
-   * Returns a {@link ProvisionBinding} for {@code key}. If none has been registered yet, registers
-   * one.
+   * Returns an injection binding for {@code key}. If none has been registered yet, registers one.
    */
-  Optional<ProvisionBinding> getOrFindProvisionBinding(Key key);
+  Optional<ContributionBinding> getOrFindInjectionBinding(Key key);
 
   /**
    * Returns a {@link MembersInjectionBinding} for {@code key}. If none has been registered yet,
@@ -48,13 +47,14 @@ public interface InjectBindingRegistry {
   Optional<MembersInjectionBinding> getOrFindMembersInjectionBinding(Key key);
 
   /**
-   * Returns a {@link ProvisionBinding} for a {@link dagger.MembersInjector} of {@code key}. If none
-   * has been registered yet, registers one.
+   * Returns a {@link MembersInjectorBinding} for {@code key}. If none has been registered yet,
+   * registers one.
    */
-  Optional<ProvisionBinding> getOrFindMembersInjectorProvisionBinding(Key key);
+  Optional<MembersInjectorBinding> getOrFindMembersInjectorBinding(Key key);
 
   @CanIgnoreReturnValue
-  Optional<ProvisionBinding> tryRegisterInjectConstructor(XConstructorElement constructorElement);
+  Optional<ContributionBinding> tryRegisterInjectConstructor(
+      XConstructorElement constructorElement);
 
   @CanIgnoreReturnValue
   Optional<MembersInjectionBinding> tryRegisterInjectField(XFieldElement fieldElement);
@@ -64,11 +64,11 @@ public interface InjectBindingRegistry {
 
   /**
    * This method ensures that sources for all registered {@link Binding bindings} (either explicitly
-   * or implicitly via {@link #getOrFindMembersInjectionBinding} or {@link
-   * #getOrFindProvisionBinding}) are generated.
+   * or implicitly via {@link #getOrFindMembersInjectionBinding} or
+   * {@link #getOrFindInjectionBinding}) are generated.
    */
   void generateSourcesForRequiredBindings(
-      SourceFileGenerator<ProvisionBinding> factoryGenerator,
+      SourceFileGenerator<ContributionBinding> factoryGenerator,
       SourceFileGenerator<MembersInjectionBinding> membersInjectorGenerator)
       throws SourceFileGenerationException;
 }

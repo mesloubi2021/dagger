@@ -32,11 +32,12 @@ import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
+import dagger.internal.codegen.binding.AssistedInjectionBinding;
 import dagger.internal.codegen.binding.Binding;
 import dagger.internal.codegen.binding.BindingGraph;
+import dagger.internal.codegen.binding.InjectionBinding;
 import dagger.internal.codegen.binding.MembersInjectionBinding;
 import dagger.internal.codegen.binding.MembersInjectionBinding.InjectionSite;
-import dagger.internal.codegen.binding.ProvisionBinding;
 import dagger.internal.codegen.javapoet.Expression;
 import dagger.internal.codegen.model.Key;
 import dagger.internal.codegen.writing.ComponentImplementation.ShardImplementation;
@@ -105,7 +106,15 @@ final class MembersInjectionMethods {
     // simple names Foo.Builder -> injectFooBuilder
     String methodName = shardImplementation.getUniqueMethodName("inject" + bindingTypeName);
     ParameterSpec parameter =
-        ParameterSpec.builder(membersInjectedType.getTypeName(), "instance").build();
+        ParameterSpec.builder(
+                membersInjectedType.getTypeName(),
+                // Technically this usage only needs to be unique within this method, but this will
+                // allocate
+                // a unique name within the shard. We could optimize this by cloning the
+                // UniqueNameSet or
+                // using NameAllocator which has a clone method in the future.
+                shardImplementation.getUniqueFieldName("instance"))
+            .build();
     MethodSpec.Builder methodBuilder =
         methodBuilder(methodName)
             .addModifiers(PRIVATE)
@@ -135,11 +144,15 @@ final class MembersInjectionMethods {
   }
 
   private static ImmutableSet<InjectionSite> injectionSites(Binding binding) {
-    if (binding instanceof ProvisionBinding) {
-      return ((ProvisionBinding) binding).injectionSites();
-    } else if (binding instanceof MembersInjectionBinding) {
-      return ((MembersInjectionBinding) binding).injectionSites();
+    switch (binding.kind()) {
+      case INJECTION:
+        return ((InjectionBinding) binding).injectionSites();
+      case ASSISTED_INJECTION:
+        return ((AssistedInjectionBinding) binding).injectionSites();
+      case MEMBERS_INJECTION:
+        return ((MembersInjectionBinding) binding).injectionSites();
+      default:
+        throw new IllegalArgumentException("Unexpected binding kind: " + binding.kind());
     }
-    throw new IllegalArgumentException(binding.key().toString());
   }
 }

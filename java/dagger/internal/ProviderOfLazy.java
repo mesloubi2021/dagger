@@ -17,9 +17,9 @@
 package dagger.internal;
 
 import static dagger.internal.Preconditions.checkNotNull;
+import static dagger.internal.Providers.asDaggerProvider;
 
 import dagger.Lazy;
-import javax.inject.Provider;
 
 /**
  * A {@link Provider} of {@link Lazy} instances that each delegate to a given {@link Provider}.
@@ -50,5 +50,14 @@ public final class ProviderOfLazy<T> implements Provider<Lazy<T>> {
    */
   public static <T> Provider<Lazy<T>> create(Provider<T> provider) {
     return new ProviderOfLazy<T>(checkNotNull(provider));
+  }
+
+  /**
+   * Legacy javax version of the method to support libraries compiled with an older version of
+   * Dagger. Do not use directly.
+   */
+  @Deprecated
+  public static <T> Provider<Lazy<T>> create(javax.inject.Provider<T> provider) {
+    return create(asDaggerProvider(provider));
   }
 }

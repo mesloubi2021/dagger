@@ -404,7 +404,7 @@ public final class ProcessingEnvironmentCompilerOptions extends CompilerOptions 
      * How to report that an explicit binding in a subcomponent conflicts with an {@code @Inject}
      * constructor used in an ancestor component.
      */
-    EXPLICIT_BINDING_CONFLICTS_WITH_INJECT(WARNING, ERROR, NONE),
+    EXPLICIT_BINDING_CONFLICTS_WITH_INJECT(ERROR, WARNING, NONE),
     ;
 
     final ValidationType defaultType;

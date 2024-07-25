@@ -29,7 +29,7 @@ import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.MembersInjectionBinding.InjectionSite;
-import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.binding.MembersInjectorBinding;
 import dagger.internal.codegen.writing.ComponentImplementation.ShardImplementation;
 import dagger.internal.codegen.writing.FrameworkFieldInitializer.FrameworkInstanceCreationExpression;
 
@@ -39,11 +39,11 @@ final class MembersInjectorProviderCreationExpression
 
   private final ShardImplementation shardImplementation;
   private final ComponentRequestRepresentations componentRequestRepresentations;
-  private final ProvisionBinding binding;
+  private final MembersInjectorBinding binding;
 
   @AssistedInject
   MembersInjectorProviderCreationExpression(
-      @Assisted ProvisionBinding binding,
+      @Assisted MembersInjectorBinding binding,
       ComponentImplementation componentImplementation,
       ComponentRequestRepresentations componentRequestRepresentations) {
     this.binding = checkNotNull(binding);
@@ -100,6 +100,6 @@ final class MembersInjectorProviderCreationExpression
 
   @AssistedFactory
   static interface Factory {
-    MembersInjectorProviderCreationExpression create(ProvisionBinding binding);
+    MembersInjectorProviderCreationExpression create(MembersInjectorBinding binding);
   }
 }

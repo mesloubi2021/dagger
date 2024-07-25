@@ -99,6 +99,10 @@ public final class AndroidClassNames {
       get("dagger.hilt.android.internal.managers", "ServiceComponentManager");
   public static final ClassName VIEW_COMPONENT_MANAGER =
       get("dagger.hilt.android.internal.managers", "ViewComponentManager");
+  public static final ClassName SAVED_STATE_HANDLE_ENTRY_POINTS =
+      get("dagger.hilt.android.internal.managers", "SavedStateHandleEntryPoints");
+  public static final ClassName SAVED_STATE_HANDLE_HOLDER =
+      get("dagger.hilt.android.internal.managers", "SavedStateHandleHolder");
 
   public static final ClassName HAS_CUSTOM_INJECT =
       get("dagger.hilt.android.internal.migration", "HasCustomInject");
@@ -125,9 +129,13 @@ public final class AndroidClassNames {
       get("androidx.lifecycle", "ViewModelProvider", "Factory");
   public static final ClassName SAVED_STATE_HANDLE =
       get("androidx.lifecycle", "SavedStateHandle");
-
+  public static final ClassName DEFAULT_LIFECYCLE_OBSERVER =
+      get("androidx.lifecycle", "DefaultLifecycleObserver");
+  public static final ClassName LIFECYCLE_OWNER = get("androidx.lifecycle", "LifecycleOwner");
   public static final ClassName ON_CONTEXT_AVAILABLE_LISTENER =
       get("androidx.activity.contextaware", "OnContextAvailableListener");
+  public static final ClassName UI_THREAD = get("androidx.annotation", "UiThread");
+
   public static final ClassName INJECT_VIA_ON_CONTEXT_AVAILABLE_LISTENER =
       get("dagger.hilt.android", "InjectViaOnContextAvailableListener");
 

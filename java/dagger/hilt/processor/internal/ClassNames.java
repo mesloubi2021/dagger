@@ -72,6 +72,9 @@ public final class ClassNames {
   public static final ClassName DEFINE_COMPONENT_CLASSES =
       get("dagger.hilt.internal.definecomponent", "DefineComponentClasses");
 
+  public static final ClassName IDENTIFIER_NAME_STRING =
+      get("dagger.internal", "IdentifierNameString");
+
   public static final ClassName ASSISTED_INJECT = get("dagger.assisted", "AssistedInject");
   public static final ClassName ASSISTED_FACTORY = get("dagger.assisted", "AssistedFactory");
   public static final ClassName BINDS =
@@ -86,6 +89,7 @@ public final class ClassNames {
   public static final ClassName INTO_SET = get("dagger.multibindings", "IntoSet");
   public static final ClassName ELEMENTS_INTO_SET = get("dagger.multibindings", "ElementsIntoSet");
   public static final ClassName STRING_KEY = get("dagger.multibindings", "StringKey");
+  public static final ClassName LAZY_CLASS_KEY = get("dagger.multibindings", "LazyClassKey");
   public static final ClassName PROVIDES =
       get("dagger", "Provides");
   public static final ClassName COMPONENT = get("dagger", "Component");
@@ -170,6 +174,8 @@ public final class ClassNames {
       get("dagger.hilt.android.internal.testing", "TestInstanceHolder");
   public static final ClassName HILT_ANDROID_TEST =
       get("dagger.hilt.android.testing", "HiltAndroidTest");
+  public static final ClassName SKIP_TEST_INJECTION =
+      get("dagger.hilt.android.testing", "SkipTestInjection");
   public static final ClassName CUSTOM_TEST_APPLICATION =
       get("dagger.hilt.android.testing", "CustomTestApplication");
   public static final ClassName ON_COMPONENT_READY_RUNNER =
@@ -214,6 +220,9 @@ public final class ClassNames {
 
   public static final ClassName SUPPRESS_WARNINGS = get("java.lang", "SuppressWarnings");
   public static final ClassName KOTLIN_SUPPRESS = get("kotlin", "Suppress");
+
+  public static final ClassName ON_RECEIVE_BYTECODE_INJECTION_MARKER =
+      get("dagger.hilt.android.internal", "OnReceiveBytecodeInjectionMarker");
 
   // Kotlin-specific class names
   public static final ClassName KOTLIN_METADATA = get("kotlin", "Metadata");

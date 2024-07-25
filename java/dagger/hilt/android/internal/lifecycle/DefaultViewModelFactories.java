@@ -29,7 +29,7 @@ import dagger.hilt.android.components.ActivityComponent;
 import dagger.hilt.android.components.FragmentComponent;
 import dagger.hilt.android.internal.builders.ViewModelComponentBuilder;
 import dagger.multibindings.Multibinds;
-import java.util.Set;
+import java.util.Map;
 import javax.inject.Inject;
 
 /**
@@ -69,12 +69,12 @@ public final class DefaultViewModelFactories {
   /** Internal factory for the Hilt ViewModel Factory. */
   public static final class InternalFactoryFactory {
 
-    private final Set<String> keySet;
+    private final Map<Class<?>, Boolean> keySet;
     private final ViewModelComponentBuilder viewModelComponentBuilder;
 
     @Inject
     InternalFactoryFactory(
-        @HiltViewModelMap.KeySet Set<String> keySet,
+        @HiltViewModelMap.KeySet Map<Class<?>, Boolean> keySet,
         ViewModelComponentBuilder viewModelComponentBuilder) {
       this.keySet = keySet;
       this.viewModelComponentBuilder = viewModelComponentBuilder;
@@ -103,7 +103,7 @@ public final class DefaultViewModelFactories {
   interface ActivityModule {
     @Multibinds
     @HiltViewModelMap.KeySet
-    abstract Set<String> viewModelKeys();
+    abstract Map<Class<?>, Boolean> viewModelKeys();
   }
 
   /** The activity entry point to retrieve the factory. */

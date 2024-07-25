@@ -95,11 +95,23 @@ public final class SourceFiles {
 
     return Maps.toMap(
         binding.dependencies(),
-        dependency ->
-            FrameworkField.create(
-                frameworkTypeMapper.getFrameworkType(dependency.kind()).frameworkClassName(),
-                dependency.key().type().xprocessing().getTypeName(),
-                DependencyVariableNamer.name(dependency)));
+        dependency -> {
+          ClassName frameworkClassName =
+              frameworkTypeMapper.getFrameworkType(dependency.kind()).frameworkClassName();
+          // Remap factory fields back to javax.inject.Provider to maintain backwards compatibility
+          // for now. In a future release, we should change this to Dagger Provider. This will still
+          // be a breaking change, but keeping compatibility for a while should reduce the
+          // likelihood of breakages as it would require components built at much older versions
+          // using factories built at newer versions to break.
+          if (frameworkClassName.equals(TypeNames.DAGGER_PROVIDER)) {
+            frameworkClassName = TypeNames.PROVIDER;
+          }
+          return FrameworkField.create(
+              ParameterizedTypeName.get(
+                  frameworkClassName,
+                  dependency.key().type().xprocessing().getTypeName()),
+              DependencyVariableNamer.name(dependency));
+        });
   }
 
   public CodeBlock frameworkTypeUsageStatement(

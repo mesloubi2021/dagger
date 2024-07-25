@@ -20,15 +20,15 @@ import androidx.room.compiler.processing.XProcessingEnv;
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
+import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.binding.FrameworkType;
-import dagger.internal.codegen.binding.ProvisionBinding;
 
 /** Binding expression for provider instances. */
 final class ProviderInstanceRequestRepresentation extends FrameworkInstanceRequestRepresentation {
 
   @AssistedInject
   ProviderInstanceRequestRepresentation(
-      @Assisted ProvisionBinding binding,
+      @Assisted ContributionBinding binding,
       SwitchingProviderInstanceSupplier.Factory switchingProviderInstanceSupplierFactory,
       StaticFactoryInstanceSupplier.Factory staticFactoryInstanceSupplierFactory,
       ProviderInstanceSupplier.Factory providerInstanceSupplierFactory,
@@ -51,7 +51,7 @@ final class ProviderInstanceRequestRepresentation extends FrameworkInstanceReque
   }
 
   private static FrameworkInstanceSupplier frameworkInstanceSupplier(
-      ProvisionBinding binding,
+      ContributionBinding binding,
       SwitchingProviderInstanceSupplier.Factory switchingProviderInstanceSupplierFactory,
       StaticFactoryInstanceSupplier.Factory staticFactoryInstanceSupplierFactory,
       ProviderInstanceSupplier.Factory providerInstanceSupplierFactory,
@@ -71,6 +71,6 @@ final class ProviderInstanceRequestRepresentation extends FrameworkInstanceReque
 
   @AssistedFactory
   static interface Factory {
-    ProviderInstanceRequestRepresentation create(ProvisionBinding binding);
+    ProviderInstanceRequestRepresentation create(ContributionBinding binding);
   }
 }

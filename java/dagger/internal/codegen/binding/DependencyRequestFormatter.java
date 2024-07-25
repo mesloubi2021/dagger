@@ -25,12 +25,10 @@ import static dagger.internal.codegen.base.RequestKinds.requestType;
 import androidx.room.compiler.processing.XElement;
 import androidx.room.compiler.processing.XProcessingEnv;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import dagger.Provides;
 import dagger.internal.codegen.base.Formatter;
 import dagger.internal.codegen.model.DaggerAnnotation;
 import dagger.internal.codegen.model.DependencyRequest;
 import dagger.internal.codegen.xprocessing.XTypes;
-import dagger.producers.Produces;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -43,8 +41,7 @@ import javax.inject.Inject;
  *   <dd>{@code @Qualifier SomeType is provided at\n ComponentType.method()}
  *   <dt>For component injection methods
  *   <dd>{@code SomeType is injected at\n ComponentType.method(foo)}
- *   <dt>For parameters to {@link Provides @Provides}, {@link Produces @Produces}, or {@link
- *       Inject @Inject} methods:
+ *   <dt>For parameters to {@code @Provides}, {@code @Produces}, or {@code @Inject} methods:
  *   <dd>{@code @Qualified ResolvedType is injected at\n EnclosingType.method([…, ]param[, …])}
  *   <dt>For parameters to {@link Inject @Inject} constructors:
  *   <dd>{@code @Qualified ResolvedType is injected at\n EnclosingType([…, ]param[, …])}

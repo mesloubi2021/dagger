@@ -24,6 +24,7 @@ import static dagger.internal.codegen.javapoet.TypeNames.providerOf;
 
 import com.google.testing.compile.CompilationRule;
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.ParameterizedTypeName;
 import dagger.internal.codegen.binding.FrameworkField;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -47,16 +48,20 @@ public class FrameworkFieldTest {
   }
 
   @Test public void frameworkType() {
-    assertThat(FrameworkField.create(PROVIDER, xTypeName, "test").type())
+    assertThat(FrameworkField.create(ParameterizedTypeName.get(PROVIDER, xTypeName), "test").type())
         .isEqualTo(providerOf(xTypeName));
-    assertThat(FrameworkField.create(MEMBERS_INJECTOR, xTypeName, "test").type())
+    assertThat(
+            FrameworkField.create(ParameterizedTypeName.get(MEMBERS_INJECTOR, xTypeName), "test")
+                .type())
         .isEqualTo(membersInjectorOf(xTypeName));
   }
 
   @Test public void nameSuffix() {
-    assertThat(FrameworkField.create(PROVIDER, xTypeName, "foo").name())
+    assertThat(FrameworkField.create(ParameterizedTypeName.get(PROVIDER, xTypeName), "foo").name())
         .isEqualTo("fooProvider");
-    assertThat(FrameworkField.create(PROVIDER, xTypeName, "fooProvider").name())
+    assertThat(
+            FrameworkField.create(ParameterizedTypeName.get(PROVIDER, xTypeName), "fooProvider")
+                .name())
         .isEqualTo("fooProvider");
   }
 

@@ -3,9 +3,9 @@ package test;
 import com.google.common.collect.ImmutableMap;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Preconditions;
+import dagger.internal.Provider;
 import java.util.Map;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -16,7 +16,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -70,7 +72,7 @@ final class DaggerTestComponent {
 
     private Provider<Handler> provideLoginHandlerProvider;
 
-    private Provider<Map<WrappedClassKey, Provider<Handler>>> mapOfWrappedClassKeyAndProviderOfHandlerProvider;
+    private Provider mapOfWrappedClassKeyAndProviderOfHandlerProvider;
 
     private TestComponentImpl(MapModuleOne mapModuleOneParam, MapModuleTwo mapModuleTwoParam) {
       this.mapModuleOne = mapModuleOneParam;
@@ -88,7 +90,8 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<Map<WrappedClassKey, Provider<Handler>>> dispatcher() {
+    public javax.inject.Provider<Map<WrappedClassKey, javax.inject.Provider<Handler>>> dispatcher(
+        ) {
       return mapOfWrappedClassKeyAndProviderOfHandlerProvider;
     }
 
@@ -107,7 +110,7 @@ final class DaggerTestComponent {
       public T get() {
         switch (id) {
           case 0: // java.util.Map<test.WrappedClassKey,javax.inject.Provider<test.Handler>> 
-          return (T) ImmutableMap.<WrappedClassKey, Provider<Handler>>of(WrappedClassKeyCreator.createWrappedClassKey(Integer.class), testComponentImpl.provideAdminHandlerProvider, WrappedClassKeyCreator.createWrappedClassKey(Long.class), testComponentImpl.provideLoginHandlerProvider);
+          return (T) ImmutableMap.<WrappedClassKey, javax.inject.Provider<Handler>>of(WrappedClassKeyCreator.createWrappedClassKey(Integer.class), testComponentImpl.provideAdminHandlerProvider, WrappedClassKeyCreator.createWrappedClassKey(Long.class), testComponentImpl.provideLoginHandlerProvider);
 
           case 1: // java.util.Map<test.WrappedClassKey,javax.inject.Provider<test.Handler>> test.MapModuleOne#provideAdminHandler 
           return (T) MapModuleOne_ProvideAdminHandlerFactory.provideAdminHandler(testComponentImpl.mapModuleOne);

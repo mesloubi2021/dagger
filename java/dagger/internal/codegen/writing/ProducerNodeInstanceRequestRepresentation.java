@@ -26,9 +26,9 @@ import dagger.internal.codegen.binding.ComponentDescriptor.ComponentMethodDescri
 import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.binding.FrameworkType;
 import dagger.internal.codegen.javapoet.Expression;
+import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.model.Key;
 import dagger.internal.codegen.writing.ComponentImplementation.ShardImplementation;
-import dagger.producers.internal.Producers;
 
 /** Binding expression for producer node instances. */
 final class ProducerNodeInstanceRequestRepresentation
@@ -61,7 +61,7 @@ final class ProducerNodeInstanceRequestRepresentation
         key,
         CodeBlock.of(
             "$T.cancel($L, $N);",
-            Producers.class,
+            TypeNames.PRODUCERS,
             result.codeBlock(),
             ComponentImplementation.MAY_INTERRUPT_IF_RUNNING_PARAM));
     return result;

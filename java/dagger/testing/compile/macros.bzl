@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Macros for building compiler tests."""
 
+load("@rules_java//java:defs.bzl", "java_binary", "java_test")
 load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_library")
 
 def compiler_test(name, size = "large", compiler_deps = None, **kwargs):
@@ -35,7 +35,7 @@ def compiler_test(name, size = "large", compiler_deps = None, **kwargs):
 
     # This JAR is loaded at runtime and contains the dependencies used by the compiler during tests.
     # We separate these dependencies from the java_test dependencies to avoid 1 version violations.
-    native.java_binary(
+    java_binary(
         name = name + "_compiler_deps",
         testonly = 1,
         tags = ["notap"],
@@ -54,8 +54,7 @@ def compiler_test(name, size = "large", compiler_deps = None, **kwargs):
     if kwargs.get("srcs", None):
         # Add a dep to allow usage of CompilerTests.
         kwargs["deps"] = kwargs.get("deps", []) + ["//java/dagger/testing/compile"]
-
-    native.java_test(name = name, size = size, **kwargs)
+    java_test(name = name, size = size, **kwargs)
 
 def kt_compiler_test(name, srcs = [], deps = [], **kwargs):
     """Generates a java_test that tests java compilation with the given compiler deps.

@@ -3,9 +3,9 @@ package test;
 import com.google.common.collect.ImmutableMap;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Preconditions;
+import dagger.internal.Provider;
 import java.util.Map;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -16,7 +16,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -70,7 +72,7 @@ final class DaggerTestComponent {
 
     private Provider<Handler> provideLoginHandlerProvider;
 
-    private Provider<Map<PathEnum, Provider<Handler>>> mapOfPathEnumAndProviderOfHandlerProvider;
+    private Provider mapOfPathEnumAndProviderOfHandlerProvider;
 
     private TestComponentImpl(MapModuleOne mapModuleOneParam, MapModuleTwo mapModuleTwoParam) {
       this.mapModuleOne = mapModuleOneParam;
@@ -88,7 +90,7 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<Map<PathEnum, Provider<Handler>>> dispatcher() {
+    public javax.inject.Provider<Map<PathEnum, javax.inject.Provider<Handler>>> dispatcher() {
       return mapOfPathEnumAndProviderOfHandlerProvider;
     }
 
@@ -107,7 +109,7 @@ final class DaggerTestComponent {
       public T get() {
         switch (id) {
           case 0: // java.util.Map<test.PathEnum,javax.inject.Provider<test.Handler>> 
-          return (T) ImmutableMap.<PathEnum, Provider<Handler>>of(PathEnum.ADMIN, testComponentImpl.provideAdminHandlerProvider, PathEnum.LOGIN, testComponentImpl.provideLoginHandlerProvider);
+          return (T) ImmutableMap.<PathEnum, javax.inject.Provider<Handler>>of(PathEnum.ADMIN, testComponentImpl.provideAdminHandlerProvider, PathEnum.LOGIN, testComponentImpl.provideLoginHandlerProvider);
 
           case 1: // java.util.Map<test.PathEnum,javax.inject.Provider<test.Handler>> test.MapModuleOne#provideAdminHandler 
           return (T) MapModuleOne_ProvideAdminHandlerFactory.provideAdminHandler(testComponentImpl.mapModuleOne);

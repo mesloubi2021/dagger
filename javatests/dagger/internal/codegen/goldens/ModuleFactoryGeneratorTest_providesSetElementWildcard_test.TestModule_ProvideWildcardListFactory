@@ -19,7 +19,9 @@ import javax.annotation.processing.Generated;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 public final class TestModule_ProvideWildcardListFactory implements Factory<List<List<?>>> {
   private final TestModule module;

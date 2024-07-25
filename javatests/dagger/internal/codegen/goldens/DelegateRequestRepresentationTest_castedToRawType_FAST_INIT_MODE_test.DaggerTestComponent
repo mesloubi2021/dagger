@@ -1,8 +1,8 @@
 package test;
 
 import dagger.internal.DaggerGenerated;
+import dagger.internal.Provider;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -13,7 +13,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -53,7 +55,7 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<CharSequence> charSequence() {
+    public javax.inject.Provider<CharSequence> charSequence() {
       return ((Provider) provideStringProvider);
     }
 
@@ -63,7 +65,7 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<String> namedString() {
+    public javax.inject.Provider<String> namedString() {
       return provideStringProvider;
     }
 

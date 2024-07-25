@@ -17,10 +17,11 @@
 package dagger.internal.codegen.binding;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static dagger.internal.codegen.extension.DaggerStreams.toImmutableList;
+import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
 import static dagger.internal.codegen.xprocessing.XElements.closestEnclosingTypeElement;
 import static dagger.internal.codegen.xprocessing.XElements.getSimpleName;
 import static dagger.internal.codegen.xprocessing.XElements.isPrivate;
-import static java.util.stream.Collectors.toList;
 
 import androidx.room.compiler.processing.XElement;
 import androidx.room.compiler.processing.XFieldElement;
@@ -33,19 +34,12 @@ import com.google.common.collect.ImmutableSortedSet;
 import dagger.internal.codegen.model.BindingKind;
 import dagger.internal.codegen.model.DependencyRequest;
 import dagger.internal.codegen.model.Key;
+import dagger.internal.codegen.model.Scope;
 import java.util.Optional;
 
-/** Represents the full members injection of a particular type. */
+/** A binding for a {@link BindingKind#MEMBERS_INJECTION}. */
 @AutoValue
 public abstract class MembersInjectionBinding extends Binding {
-  static MembersInjectionBinding create(
-      Key key,
-      ImmutableSet<DependencyRequest> dependencies,
-      Optional<MembersInjectionBinding> unresolved,
-      ImmutableSortedSet<InjectionSite> injectionSites) {
-    return new AutoValue_MembersInjectionBinding(key, dependencies, unresolved, injectionSites);
-  }
-
   @Override
   public final Optional<XElement> bindingElement() {
     return Optional.of(membersInjectedType());
@@ -54,9 +48,6 @@ public abstract class MembersInjectionBinding extends Binding {
   public final XTypeElement membersInjectedType() {
     return key().type().xprocessing().getTypeElement();
   }
-
-  @Override
-  public abstract Optional<MembersInjectionBinding> unresolved();
 
   @Override
   public Optional<XTypeElement> contributingModule() {
@@ -81,6 +72,13 @@ public abstract class MembersInjectionBinding extends Binding {
     return false;
   }
 
+  @Override
+  public final ImmutableSet<DependencyRequest> dependencies() {
+    return injectionSites().stream()
+        .flatMap(injectionSite -> injectionSite.dependencies().stream())
+        .collect(toImmutableSet());
+  }
+
   /**
    * Returns {@code true} if any of this binding's injection sites are directly on the bound type.
    */
@@ -95,6 +93,11 @@ public abstract class MembersInjectionBinding extends Binding {
     return false;
   }
 
+  @Override
+  public Optional<Scope> scope() {
+    return Optional.empty();
+  }
+
   @Memoized
   @Override
   public abstract int hashCode();
@@ -102,6 +105,22 @@ public abstract class MembersInjectionBinding extends Binding {
   // TODO(ronshapiro,dpb): simplify the equality semantics
   @Override
   public abstract boolean equals(Object obj);
+
+  static Builder builder() {
+    return new AutoValue_MembersInjectionBinding.Builder();
+  }
+
+  /** A {@link MembersInjectionBinding} builder. */
+  @AutoValue.Builder
+  abstract static class Builder {
+    abstract Builder key(Key key);
+
+    abstract Builder unresolved(Optional<? extends Binding> unresolved);
+
+    abstract Builder injectionSites(ImmutableSortedSet<InjectionSite> injectionSites);
+
+    abstract MembersInjectionBinding build();
+  }
 
   /** Metadata about a field or method injection site. */
   @AutoValue
@@ -131,7 +150,7 @@ public abstract class MembersInjectionBinding extends Binding {
           .filter(InjectionAnnotations::hasInjectAnnotation)
           .filter(element -> !isPrivate(element))
           .filter(element -> getSimpleName(element).equals(getSimpleName(this.element())))
-          .collect(toList())
+          .collect(toImmutableList())
           .indexOf(element());
     }
 

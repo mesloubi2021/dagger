@@ -18,7 +18,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 public final class FieldInjectionWithQualifier_MembersInjector implements MembersInjector<FieldInjectionWithQualifier> {
   private final Provider<String> aProvider;

@@ -38,13 +38,23 @@ public final class ComplexMapKeysInDifferentOrderTest {
   @interface ComplexMapKey {
     int i();
     int j();
+
+    NestKey[] nestKeys() default {};
+  }
+
+  @Retention(RUNTIME)
+  @MapKey(unwrapValue = false)
+  @interface NestKey {
+    int i() default 0;
+
+    String j() default "";
   }
 
   @Module
   interface TestModule {
     @Provides
     @IntoMap
-    @ComplexMapKey(i = 1, j = 2)
+    @ComplexMapKey(i = 1, j = 2, nestKeys = @NestKey)
     static int inOrder() {
       return 3;
     }
@@ -66,12 +76,21 @@ public final class ComplexMapKeysInDifferentOrderTest {
   public void test() {
     Map<ComplexMapKey, Integer> map =
         DaggerComplexMapKeysInDifferentOrderTest_TestComponent.create().map();
-    assertThat(map.get(mapKey(1, 2))).isEqualTo(3);
-    assertThat(map.get(mapKey(5, 4))).isEqualTo(6);
+    assertThat(map)
+        .containsEntry(
+            mapKey(
+                1,
+                2,
+                new NestKey[] {
+                  new AutoAnnotation_ComplexMapKeysInDifferentOrderTest_ComplexMapKeyCreator_createNestKey(
+                      0, "")
+                }),
+            3);
+    assertThat(map).containsEntry(mapKey(5, 4, new NestKey[] {}), 6);
   }
 
   @AutoAnnotation
-  static ComplexMapKey mapKey(int i, int j) {
-    return new AutoAnnotation_ComplexMapKeysInDifferentOrderTest_mapKey(i, j);
+  static ComplexMapKey mapKey(int i, int j, NestKey[] nestKeys) {
+    return new AutoAnnotation_ComplexMapKeysInDifferentOrderTest_mapKey(i, j, nestKeys);
   }
 }

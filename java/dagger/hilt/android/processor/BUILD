@@ -16,7 +16,7 @@
 #   Hilt android processors.
 
 load("//:build_defs.bzl", "POM_VERSION")
-load("//tools:maven.bzl", "gen_maven_artifact")
+load("//tools/maven:maven.bzl", "gen_maven_artifact")
 
 package(default_visibility = ["//:src"])
 
@@ -52,6 +52,7 @@ gen_maven_artifact(
         "//java/dagger/hilt/processor/internal:component_names",
         "//java/dagger/hilt/processor/internal:components",
         "//java/dagger/hilt/processor/internal:hilt_processing_env_configs",
+        "//java/dagger/hilt/processor/internal:method_signature",
         "//java/dagger/hilt/processor/internal:processor_errors",
         "//java/dagger/hilt/processor/internal:processors",
         "//java/dagger/hilt/processor/internal/aggregateddeps:component_dependencies",

@@ -19,7 +19,7 @@ package dagger.internal.codegen.writing;
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
-import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.writing.FrameworkFieldInitializer.FrameworkInstanceCreationExpression;
 
 /** An object that initializes a framework-type component field for a binding. */
@@ -28,7 +28,7 @@ final class ProviderInstanceSupplier implements FrameworkInstanceSupplier {
 
   @AssistedInject
   ProviderInstanceSupplier(
-      @Assisted ProvisionBinding binding,
+      @Assisted ContributionBinding binding,
       ComponentImplementation componentImplementation,
       UnscopedFrameworkInstanceCreationExpressionFactory
           unscopedFrameworkInstanceCreationExpressionFactory,
@@ -51,6 +51,6 @@ final class ProviderInstanceSupplier implements FrameworkInstanceSupplier {
 
   @AssistedFactory
   static interface Factory {
-    ProviderInstanceSupplier create(ProvisionBinding binding);
+    ProviderInstanceSupplier create(ContributionBinding binding);
   }
 }

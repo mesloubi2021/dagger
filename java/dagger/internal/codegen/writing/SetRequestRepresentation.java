@@ -34,7 +34,7 @@ import dagger.internal.SetBuilder;
 import dagger.internal.codegen.base.ContributionType;
 import dagger.internal.codegen.base.SetType;
 import dagger.internal.codegen.binding.BindingGraph;
-import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.binding.MultiboundSetBinding;
 import dagger.internal.codegen.javapoet.CodeBlocks;
 import dagger.internal.codegen.javapoet.Expression;
 import dagger.internal.codegen.javapoet.TypeNames;
@@ -43,14 +43,14 @@ import java.util.Collections;
 
 /** A binding expression for multibound sets. */
 final class SetRequestRepresentation extends RequestRepresentation {
-  private final ProvisionBinding binding;
+  private final MultiboundSetBinding binding;
   private final BindingGraph graph;
   private final ComponentRequestRepresentations componentRequestRepresentations;
   private final XProcessingEnv processingEnv;
 
   @AssistedInject
   SetRequestRepresentation(
-      @Assisted ProvisionBinding binding,
+      @Assisted MultiboundSetBinding binding,
       BindingGraph graph,
       ComponentImplementation componentImplementation,
       ComponentRequestRepresentations componentRequestRepresentations,
@@ -189,6 +189,6 @@ final class SetRequestRepresentation extends RequestRepresentation {
 
   @AssistedFactory
   static interface Factory {
-    SetRequestRepresentation create(ProvisionBinding binding);
+    SetRequestRepresentation create(MultiboundSetBinding binding);
   }
 }

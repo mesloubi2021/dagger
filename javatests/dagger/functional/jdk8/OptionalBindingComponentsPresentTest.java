@@ -17,7 +17,6 @@
 package dagger.functional.jdk8;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static dagger.functional.jdk8.OptionalBindingComponents.Value.QUALIFIED_VALUE;
 import static dagger.functional.jdk8.OptionalBindingComponents.Value.VALUE;
 

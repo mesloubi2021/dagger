@@ -15,7 +15,7 @@
 # Description:
 #   A library for the kythe plugin.
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:defs.bzl", "java_import", "java_library")
 
 package(default_visibility = ["//:src"])
 
@@ -31,17 +31,15 @@ java_library(
         "//java/dagger/internal/codegen/javac",
         "//java/dagger/internal/codegen/javapoet",
         "//java/dagger/internal/codegen/kotlin",
-        "//java/dagger/internal/codegen/langmodel",
         "//java/dagger/internal/codegen/model",
         "//java/dagger/internal/codegen/validation",
         "//java/dagger/internal/codegen/xprocessing",
         "//third_party/java/auto:service",
         "//third_party/java/error_prone:annotations",
         "//third_party/java/guava/collect",
+        "//third_party/java/jsr330_inject",
     ],
 )
-
-load("@rules_java//java:defs.bzl", "java_import")
 
 # A _deploy.jar consisting of the java_librarys in https://github.com/kythe/kythe needed to build a
 # Kythe plugin

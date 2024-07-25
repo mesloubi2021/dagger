@@ -1,8 +1,8 @@
 package test;
 
 import dagger.internal.DaggerGenerated;
+import dagger.internal.Provider;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 import other.Subtype_Factory;
 import other.Supertype;
 
@@ -15,7 +15,9 @@ import other.Supertype;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerRequestsSubtypeAsProvider {
   private DaggerRequestsSubtypeAsProvider() {
@@ -56,7 +58,7 @@ final class DaggerRequestsSubtypeAsProvider {
     }
 
     @Override
-    public Provider<Supertype> supertypeProvider() {
+    public javax.inject.Provider<Supertype> supertypeProvider() {
       return subtypeProvider;
     }
 

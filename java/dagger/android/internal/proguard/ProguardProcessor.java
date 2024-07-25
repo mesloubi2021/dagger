@@ -16,19 +16,13 @@
 
 package dagger.android.internal.proguard;
 
-import static javax.tools.StandardLocation.CLASS_OUTPUT;
-
+import androidx.room.compiler.processing.XProcessingEnv;
+import androidx.room.compiler.processing.XProcessingStep;
+import androidx.room.compiler.processing.javac.JavacBasicAnnotationProcessor;
 import com.google.auto.service.AutoService;
-import java.io.IOException;
-import java.io.Writer;
-import java.util.Set;
-import javax.annotation.processing.AbstractProcessor;
-import javax.annotation.processing.Filer;
+import com.google.common.collect.ImmutableList;
 import javax.annotation.processing.Processor;
-import javax.annotation.processing.RoundEnvironment;
-import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.lang.model.SourceVersion;
-import javax.lang.model.element.TypeElement;
 
 /**
  * An {@linkplain Processor annotation processor} to generate dagger-android's specific proguard
@@ -44,46 +38,17 @@ import javax.lang.model.element.TypeElement;
  * </code></pre>
  */
 @AutoService(Processor.class)
-@SupportedAnnotationTypes(ProguardProcessor.GENERATE_RULES_ANNOTATION_NAME)
-public final class ProguardProcessor extends AbstractProcessor {
-
-  static final String GENERATE_RULES_ANNOTATION_NAME =
-      "dagger.android.internal.GenerateAndroidInjectionProguardRules";
+public final class ProguardProcessor extends JavacBasicAnnotationProcessor {
+  private XProcessingEnv env;
 
   @Override
-  public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
-    roundEnv
-        .getElementsAnnotatedWith(
-            processingEnv.getElementUtils().getTypeElement(GENERATE_RULES_ANNOTATION_NAME))
-        .forEach(element -> generate());
-
-    return false;
+  public void initialize(XProcessingEnv env) {
+    this.env = env;
   }
 
-  private void generate() {
-    Filer filer = processingEnv.getFiler();
-
-    String errorProneRule = "-dontwarn com.google.errorprone.annotations.**\n";
-    String androidInjectionKeysRule =
-        "-identifiernamestring class dagger.android.internal.AndroidInjectionKeys {\n"
-            + "  java.lang.String of(java.lang.String);\n"
-            + "}\n";
-
-    writeFile(filer, "com.android.tools/proguard", errorProneRule);
-    writeFile(filer, "com.android.tools/r8", errorProneRule + androidInjectionKeysRule);
-    writeFile(filer, "proguard", errorProneRule);
-  }
-
-  private static void writeFile(Filer filer, String intermediatePath, String contents) {
-    try (Writer writer =
-        filer
-            .createResource(
-                CLASS_OUTPUT, "", "META-INF/" + intermediatePath + "/dagger-android.pro")
-            .openWriter()) {
-      writer.write(contents);
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
-    }
+  @Override
+  public Iterable<XProcessingStep> processingSteps() {
+    return ImmutableList.of(new ProguardProcessingStep(env));
   }
 
   @Override

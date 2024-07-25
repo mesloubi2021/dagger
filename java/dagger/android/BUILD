@@ -17,14 +17,14 @@
 
 load(
     "//:build_defs.bzl",
-    "DOCLINT_HTML_AND_SYNTAX",
-    "DOCLINT_REFERENCES",
-    "JAVA_RELEASE_MIN",
     "POM_VERSION",
 )
 load("//tools:dejetify.bzl", "dejetified_library")
-load("//tools:maven.bzl", "pom_file")
-load("@google_bazel_common//tools/javadoc:javadoc.bzl", "javadoc_library")
+load(
+    "//tools/maven:maven.bzl",
+    "dagger_pom_file",
+    "gen_maven_artifact",
+)
 
 package(default_visibility = ["//:src"])
 
@@ -43,8 +43,6 @@ filegroup(
 android_library(
     name = "android",
     srcs = SRCS,
-    javacopts = JAVA_RELEASE_MIN + DOCLINT_HTML_AND_SYNTAX + DOCLINT_REFERENCES,
-    manifest = "AndroidManifest.xml",
     plugins = [
         "//java/dagger/android/internal/proguard:plugin",
     ],
@@ -60,17 +58,28 @@ android_library(
     ],
 )
 
-pom_file(
-    name = "pom",
-    artifact_id = "dagger-android",
+gen_maven_artifact(
+    name = "artifact",
+    artifact_coordinates = "com.google.dagger:dagger-android:" + POM_VERSION,
     artifact_name = "Dagger Android",
+    artifact_target = ":android",
+    artifact_target_maven_deps = [
+        "androidx.annotation:annotation",
+        "com.google.dagger:dagger",
+        "com.google.dagger:dagger-lint-aar",
+    ],
+    javadoc_android_api_level = 32,
+    javadoc_root_packages = [
+        "dagger.android",
+    ],
+    javadoc_srcs = [":android-srcs"],
+    manifest = "AndroidManifest.xml",
     packaging = "aar",
-    targets = [":android"],
 )
 
 dejetified_library(
     name = "dejetified-android",
-    input = ":android.aar",
+    input = ":artifact.aar",
     output = "android-legacy.aar",
 )
 
@@ -85,19 +94,10 @@ android_library(
     ],
 )
 
-pom_file(
+dagger_pom_file(
     name = "legacy-pom",
     artifact_id = "dagger-android-legacy",
     artifact_name = "Dagger Android Legacy",
     packaging = "aar",
     targets = [":legacy-deps"],
-)
-
-javadoc_library(
-    name = "android-javadoc",
-    srcs = [":android-srcs"],
-    android_api_level = 30,
-    exclude_packages = ["dagger.android.internal"],
-    root_packages = ["dagger.android"],
-    deps = [":android"],
 )

@@ -44,7 +44,6 @@ java_library(
     deps = [
         "//java/dagger:core",
         "//java/dagger/internal/codegen/extension",
-        "//java/dagger/producers",
         "//third_party/java/auto:common",
         "//third_party/java/auto:value",
         "//third_party/java/error_prone:annotations",

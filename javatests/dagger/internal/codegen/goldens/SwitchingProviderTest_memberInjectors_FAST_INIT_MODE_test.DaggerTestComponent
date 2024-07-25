@@ -4,8 +4,8 @@ import dagger.MembersInjector;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.InstanceFactory;
 import dagger.internal.MembersInjectors;
+import dagger.internal.Provider;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -16,7 +16,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -56,7 +58,7 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<MembersInjector<Foo>> providerOfMembersInjector() {
+    public javax.inject.Provider<MembersInjector<Foo>> providerOfMembersInjector() {
       return fooMembersInjectorProvider;
     }
   }

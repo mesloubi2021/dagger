@@ -20,6 +20,7 @@ import static dagger.internal.DaggerCollections.hasDuplicates;
 import static dagger.internal.DaggerCollections.newHashSetWithExpectedSize;
 import static dagger.internal.DaggerCollections.presizedList;
 import static dagger.internal.Preconditions.checkNotNull;
+import static dagger.internal.Providers.asDaggerProvider;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableSet;
 
@@ -27,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import javax.inject.Provider;
 
 /**
  * A {@link Factory} implementation used to implement {@link Set} bindings. This factory always
@@ -73,12 +73,31 @@ public final class SetFactory<T> implements Factory<Set<T>> {
       return this;
     }
 
+    /**
+     * Legacy javax version of the method to support libraries compiled with an older version of
+     * Dagger. Do not use directly.
+     */
+    @Deprecated
+    public Builder<T> addProvider(javax.inject.Provider<? extends T> individualProvider) {
+      return addProvider(asDaggerProvider(individualProvider));
+    }
+
     @SuppressWarnings("unchecked")
     public Builder<T> addCollectionProvider(
         Provider<? extends Collection<? extends T>> collectionProvider) {
       assert collectionProvider != null : "Codegen error? Null provider";
       collectionProviders.add((Provider<Collection<T>>) collectionProvider);
       return this;
+    }
+
+    /**
+     * Legacy javax version of the method to support libraries compiled with an older version of
+     * Dagger. Do not use directly.
+     */
+    @Deprecated
+    public Builder<T> addCollectionProvider(
+        javax.inject.Provider<? extends Collection<? extends T>> collectionProvider) {
+      return addCollectionProvider(asDaggerProvider(collectionProvider));
     }
 
     public SetFactory<T> build() {

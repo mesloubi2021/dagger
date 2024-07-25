@@ -16,5 +16,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="simple.app">
   <application android:name=".SimpleApp" android:label="Flavored App">
+    <receiver android:name=".SimpleReceiver" android:exported="false">
+    </receiver>
   </application>
 </manifest>

@@ -162,7 +162,8 @@ public final class HiltCompilerTests {
                 /* classpath= */ ImmutableList.of(CompilerTests.compilerDepsJar()),
                 /* inheritClasspath= */ false,
                 /* javacArguments= */ ImmutableList.of(),
-                /* kotlincArguments= */ ImmutableList.of(),
+                /* kotlincArguments= */ ImmutableList.of(
+                    ),
                 /* kaptProcessors= */ ImmutableList.<Processor>builder()
                     .addAll(defaultProcessors())
                     .addAll(additionalProcessors)
@@ -276,7 +277,8 @@ public final class HiltCompilerTests {
           /* options= */ processorOptions(),
           /* javacArguments= */ javacArguments().asList(),
           /* kotlincArguments= */ ImmutableList.of(
-              "-P", "plugin:org.jetbrains.kotlin.kapt3:correctErrorTypes=true"),
+              "-P",
+              "plugin:org.jetbrains.kotlin.kapt3:correctErrorTypes=true"),
           /* config= */ HiltProcessingEnvConfigs.CONFIGS,
           /* javacProcessors= */ ImmutableList.<Processor>builder()
               .addAll(mergeProcessors(defaultProcessors(), additionalJavacProcessors()))

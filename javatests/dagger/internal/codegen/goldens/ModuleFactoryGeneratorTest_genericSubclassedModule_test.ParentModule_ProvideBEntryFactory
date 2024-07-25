@@ -19,7 +19,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 public final class ParentModule_ProvideBEntryFactory<A extends CharSequence, B, C extends Number & Comparable<C>> implements Factory<B> {
   private final ParentModule<A, B, C> module;

@@ -22,11 +22,11 @@ import static dagger.internal.codegen.binding.SourceFiles.bindingTypeElementType
 import static dagger.internal.codegen.binding.SourceFiles.generatedClassNameForBinding;
 import static dagger.internal.codegen.binding.SourceFiles.setFactoryClassName;
 import static dagger.internal.codegen.javapoet.CodeBlocks.toParametersCodeBlock;
+import static dagger.internal.codegen.javapoet.TypeNames.DAGGER_PROVIDER;
 import static dagger.internal.codegen.javapoet.TypeNames.FACTORY;
 import static dagger.internal.codegen.javapoet.TypeNames.MAP_FACTORY;
 import static dagger.internal.codegen.javapoet.TypeNames.PRODUCER;
 import static dagger.internal.codegen.javapoet.TypeNames.PRODUCERS;
-import static dagger.internal.codegen.javapoet.TypeNames.PROVIDER;
 import static dagger.internal.codegen.langmodel.Accessibility.isTypeAccessibleFrom;
 import static dagger.internal.codegen.xprocessing.XTypes.isDeclared;
 
@@ -52,7 +52,7 @@ final class StaticMemberSelects {
         ? new ParameterizedStaticMethod(
             PRODUCERS, typeParameters, CodeBlock.of("emptyMapProducer()"), PRODUCER)
         : new ParameterizedStaticMethod(
-            MAP_FACTORY, typeParameters, CodeBlock.of("emptyMapProvider()"), PROVIDER);
+            MAP_FACTORY, typeParameters, CodeBlock.of("emptyMapProvider()"), DAGGER_PROVIDER);
   }
 
   /**

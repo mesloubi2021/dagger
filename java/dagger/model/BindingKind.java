@@ -34,8 +34,7 @@ public enum BindingKind {
   ASSISTED_FACTORY,
 
   /**
-   * An implicit binding for a {@link dagger.Component}- or {@link
-   * dagger.producers.ProductionComponent}-annotated type.
+   * An implicit binding for a {@code Component}- or {@code ProductionComponent}-annotated type.
    */
   COMPONENT,
 
@@ -65,14 +64,13 @@ public enum BindingKind {
   /** A binding for a {@link dagger.BindsInstance}-annotated builder method. */
   BOUND_INSTANCE,
 
-  /** A binding for a {@link dagger.producers.Produces}-annotated method. */
+  /** A binding for a {@code Produces}-annotated method. */
   PRODUCTION,
 
   /**
-   * A binding for a production method on a production component's {@linkplain
-   * dagger.producers.ProductionComponent#dependencies()} dependency} that returns a {@link
-   * com.google.common.util.concurrent.ListenableFuture} or {@link
-   * com.google.common.util.concurrent.FluentFuture}. Methods on production component dependencies
+   * A binding for a production method on a production component's
+   * {@code ProductionComponent#dependencies()} that returns a {@code ListenableFuture} or
+   * {@code FluentFuture}. Methods on production component dependencies
    * that don't return a future are considered {@linkplain #COMPONENT_PROVISION component provision
    * bindings}.
    */

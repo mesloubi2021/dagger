@@ -21,7 +21,6 @@ import static com.google.common.truth.Truth.assertThat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.inject.Provider;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;

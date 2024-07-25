@@ -16,21 +16,14 @@
 
 package dagger.hilt.android.processor.internal.androidentrypoint;
 
-import static dagger.internal.codegen.extension.DaggerStreams.toImmutableList;
-import static dagger.internal.codegen.xprocessing.XElements.getSimpleName;
-import static java.util.stream.Collectors.joining;
 
 import androidx.room.compiler.processing.JavaPoetExtKt;
-import androidx.room.compiler.processing.XConstructorElement;
-import androidx.room.compiler.processing.XExecutableParameterElement;
 import androidx.room.compiler.processing.XFiler;
 import androidx.room.compiler.processing.XProcessingEnv;
 import androidx.room.compiler.processing.XTypeParameterElement;
-import com.google.common.collect.ImmutableList;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeSpec;
 import dagger.hilt.android.processor.internal.AndroidClassNames;
 import dagger.hilt.processor.internal.Processors;
@@ -58,7 +51,6 @@ public final class ServiceGenerator {
         TypeSpec.classBuilder(generatedClassName.simpleName())
             .superclass(metadata.baseClassName())
             .addModifiers(metadata.generatedClassModifiers())
-            .addMethods(baseClassConstructors())
             .addMethod(onCreateMethod());
 
     JavaPoetExtKt.addOriginatingElement(builder, metadata.element());
@@ -74,34 +66,12 @@ public final class ServiceGenerator {
     Generators.addInjectionMethods(metadata, builder);
 
     Generators.addComponentOverride(metadata, builder);
+    Generators.copyConstructors(metadata.baseElement(), builder, metadata.element());
 
     env.getFiler()
         .write(
             JavaFile.builder(generatedClassName.packageName(), builder.build()).build(),
             XFiler.Mode.Isolating);
-  }
-
-  private ImmutableList<MethodSpec> baseClassConstructors() {
-    return metadata.baseElement().getConstructors().stream()
-        .map(ServiceGenerator::toMethodSpec)
-        .collect(toImmutableList());
-  }
-
-  private static MethodSpec toMethodSpec(XConstructorElement constructor) {
-    ImmutableList<ParameterSpec> params =
-        constructor.getParameters().stream()
-            .map(ServiceGenerator::toParameterSpec)
-            .collect(toImmutableList());
-
-    return MethodSpec.constructorBuilder()
-        .addParameters(params)
-        .addStatement("super($L)", params.stream().map(p -> p.name).collect(joining(",")))
-        .build();
-  }
-
-  private static ParameterSpec toParameterSpec(XExecutableParameterElement parameter) {
-    return ParameterSpec.builder(parameter.getType().getTypeName(), getSimpleName(parameter))
-        .build();
   }
 
   // @CallSuper

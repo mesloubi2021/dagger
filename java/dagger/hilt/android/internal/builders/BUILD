@@ -25,6 +25,7 @@ android_library(
         "//java/dagger/hilt:define_component",
         "//java/dagger/hilt/android:view_model_lifecycle",
         "//java/dagger/hilt/android/components",
+        "//java/dagger/hilt/android/internal/managers:saved_state_handle_holder",
         "@maven//:androidx_activity_activity",
         "@maven//:androidx_fragment_fragment",
         "@maven//:androidx_lifecycle_lifecycle_common",

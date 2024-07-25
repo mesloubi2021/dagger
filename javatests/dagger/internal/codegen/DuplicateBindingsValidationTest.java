@@ -1052,9 +1052,8 @@ public class DuplicateBindingsValidationTest {
     CompilerTests.daggerCompiler(foo, injected1, injected2, provided1, provided2)
         .compile(
             subject -> {
-              subject.hasErrorCount(0);
-              subject.hasWarningCount(1);
-              subject.hasWarningContaining(
+              subject.hasErrorCount(1);
+              subject.hasErrorContaining(
                       message(
                           "Foo is bound multiple times:",
                           "    @Inject Foo(Set<String>) [Injected1]",

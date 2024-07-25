@@ -16,7 +16,7 @@
 
 package dagger.functional.jdk8;
 
-import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 
 import dagger.functional.jdk8.OptionalBindingComponents.EmptyOptionalBindingComponent;
 import org.junit.Before;

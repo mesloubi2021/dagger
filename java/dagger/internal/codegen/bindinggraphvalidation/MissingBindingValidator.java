@@ -20,12 +20,13 @@ import static androidx.room.compiler.processing.compat.XConverters.getProcessing
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.Iterables.getLast;
 import static com.google.common.collect.Iterables.getOnlyElement;
+import static dagger.internal.codegen.base.ElementFormatter.elementToString;
+import static dagger.internal.codegen.base.Formatter.INDENT;
 import static dagger.internal.codegen.base.Keys.isValidImplicitProvisionKey;
 import static dagger.internal.codegen.base.Keys.isValidMembersInjectionKey;
-import static dagger.internal.codegen.base.RequestKinds.canBeSatisfiedByProductionBinding;
+import static dagger.internal.codegen.base.RequestKinds.dependencyCanBeProduction;
 import static dagger.internal.codegen.binding.DependencyRequestFormatter.DOUBLE_INDENT;
 import static dagger.internal.codegen.extension.DaggerStreams.instancesOf;
-import static dagger.internal.codegen.extension.DaggerStreams.toImmutableList;
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
 import static dagger.internal.codegen.xprocessing.XTypes.isDeclared;
 import static dagger.internal.codegen.xprocessing.XTypes.isWildcard;
@@ -38,16 +39,15 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.WildcardTypeName;
+import dagger.internal.codegen.binding.ComponentNodeImpl;
 import dagger.internal.codegen.binding.DependencyRequestFormatter;
 import dagger.internal.codegen.binding.InjectBindingRegistry;
 import dagger.internal.codegen.model.Binding;
 import dagger.internal.codegen.model.BindingGraph;
-import dagger.internal.codegen.model.BindingGraph.ComponentNode;
 import dagger.internal.codegen.model.BindingGraph.DependencyEdge;
 import dagger.internal.codegen.model.BindingGraph.Edge;
 import dagger.internal.codegen.model.BindingGraph.MissingBinding;
 import dagger.internal.codegen.model.BindingGraph.Node;
-import dagger.internal.codegen.model.ComponentPath;
 import dagger.internal.codegen.model.DaggerAnnotation;
 import dagger.internal.codegen.model.DiagnosticReporter;
 import dagger.internal.codegen.model.Key;
@@ -103,62 +103,20 @@ final class MissingBindingValidator extends ValidationBindingGraphPlugin {
     prunedGraph
         .missingBindings()
         .forEach(
-            missingBinding ->
-                reportMissingBinding(missingBinding, prunedGraph, fullGraph, diagnosticReporter));
+            missingBinding -> reportMissingBinding(missingBinding, fullGraph, diagnosticReporter));
   }
 
   private void reportMissingBinding(
       MissingBinding missingBinding,
-      BindingGraph prunedGraph,
-      BindingGraph fullGraph,
+      BindingGraph graph,
       DiagnosticReporter diagnosticReporter) {
-    ImmutableSet<Binding> wildcardAlternatives =
-        getSimilarTypeBindings(fullGraph, missingBinding.key());
-    String wildcardTypeErrorMessage = "";
-    if (!wildcardAlternatives.isEmpty()) {
-      wildcardTypeErrorMessage =
-          String.format(
-              "\nFound similar bindings:\n    %s",
-              String.join(
-                  "\n    ",
-                  wildcardAlternatives.stream()
-                      .map(
-                          binding -> binding.key().type() + " in [" + binding.componentPath() + "]")
-                      .collect(toImmutableSet())))
-                  + "\n(In Kotlin source, a type like 'Set<Foo>' may"
-                  + " be translated as 'Set<? extends Foo>'. To avoid this implicit"
-                  + " conversion you can add '@JvmSuppressWildcards' on the associated type"
-                  + " argument, e.g. 'Set<@JvmSuppressWildcards Foo>'.)";
-    }
-
-    List<ComponentPath> alternativeComponents =
-        wildcardAlternatives.isEmpty()
-            ? fullGraph.bindings(missingBinding.key()).stream()
-                .map(Binding::componentPath)
-                .distinct()
-                .collect(toImmutableList())
-            : ImmutableList.of();
-    // Print component name for each binding along the dependency path if the missing binding
-    // exists in a different component than expected
-    if (alternativeComponents.isEmpty()) {
-      // TODO(b/266993189): the passed in diagnostic reporter is constructed with full graph, so it
-      // doesn't print out full dependency path for a binding when invoking reportBinding on it.
-      // Therefore, we manually constructed the binding dependency path and passed into
-      // reportComponent.
-      diagnosticReporter.reportComponent(
-          ERROR,
-          fullGraph.componentNode(missingBinding.componentPath()).get(),
-          missingBindingErrorMessage(missingBinding, fullGraph)
-              + wildcardTypeErrorMessage
-              + "\n\nMissing binding usage:"
-              + diagnosticMessageGeneratorFactory.create(prunedGraph).getMessage(missingBinding));
-    } else {
-      diagnosticReporter.reportComponent(
-          ERROR,
-          fullGraph.componentNode(missingBinding.componentPath()).get(),
-          missingBindingErrorMessage(missingBinding, fullGraph)
-              + wrongComponentErrorMessage(missingBinding, alternativeComponents, prunedGraph));
-    }
+    diagnosticReporter.reportComponent(
+        ERROR,
+        graph.componentNode(missingBinding.componentPath()).get(),
+        missingBindingErrorMessage(missingBinding, graph)
+            + missingBindingDependencyTraceMessage(missingBinding, graph)
+            + alternativeBindingsMessage(missingBinding, graph)
+            + similarBindingsMessage(missingBinding, graph));
   }
 
   private static ImmutableSet<Binding> getSimilarTypeBindings(
@@ -222,50 +180,24 @@ final class MissingBindingValidator extends ValidationBindingGraphPlugin {
     return errorMessage.toString();
   }
 
-  private String wrongComponentErrorMessage(
-      MissingBinding missingBinding,
-      List<ComponentPath> alternativeComponentPath,
-      BindingGraph graph) {
+  private String missingBindingDependencyTraceMessage(
+      MissingBinding missingBinding, BindingGraph graph) {
     ImmutableSet<DependencyEdge> entryPoints =
         graph.entryPointEdgesDependingOnBinding(missingBinding);
     DiagnosticMessageGenerator generator = diagnosticMessageGeneratorFactory.create(graph);
     ImmutableList<DependencyEdge> dependencyTrace =
         generator.dependencyTrace(missingBinding, entryPoints);
     StringBuilder message =
-        graph.isFullBindingGraph()
-            ? new StringBuilder()
-            : new StringBuilder(dependencyTrace.size() * 100 /* a guess heuristic */);
-    // Check in which component the missing binding is requested. This can be different from the
-    // component the missing binding is in because we'll try to search up the parent components for
-    // a binding which makes missing bindings end up at the root component. This is different from
-    // the place we are logically requesting the binding from. Note that this is related to the
-    // particular dependency trace being shown and so is not necessarily stable.
-    String missingComponentName =
-        getComponentFromDependencyEdge(dependencyTrace.get(0), graph, false);
-    boolean hasSameComponentName = false;
-    for (ComponentPath component : alternativeComponentPath) {
-      message.append("\nNote: A binding for ").append(missingBinding.key()).append(" exists in ");
-      String currentComponentName = component.currentComponent().className().canonicalName();
-      if (currentComponentName.contentEquals(missingComponentName)) {
-        hasSameComponentName = true;
-        message.append("[").append(component).append("]");
-      } else {
-        message.append(currentComponentName);
-      }
-      message.append(":");
-    }
+        new StringBuilder(dependencyTrace.size() * 100 /* a guess heuristic */).append("\n");
     for (DependencyEdge edge : dependencyTrace) {
       String line = dependencyRequestFormatter.format(edge.dependencyRequest());
       if (line.isEmpty()) {
         continue;
       }
-      // If we ran into a rare case where the component names collide and we need to show the full
-      // path, only show the full path for the first dependency request. This is guaranteed to be
-      // the component in question since the logic for checking for a collision uses the first
-      // edge in the trace. Do not expand subsequent component paths to reduce spam.
-      String componentName =
-          String.format("[%s] ", getComponentFromDependencyEdge(edge, graph, hasSameComponentName));
-      hasSameComponentName = false;
+      // We don't have to check for cases where component names collide since
+      //  1. We always show the full classname of the component, and
+      //  2. We always show the full component path at the end of the dependency trace (below).
+      String componentName = String.format("[%s] ", getComponentFromDependencyEdge(edge, graph));
       message.append("\n").append(line.replace(DOUBLE_INDENT, DOUBLE_INDENT + componentName));
     }
     if (!dependencyTrace.isEmpty()) {
@@ -277,25 +209,76 @@ final class MissingBindingValidator extends ValidationBindingGraphPlugin {
     return message.toString();
   }
 
+  private String alternativeBindingsMessage(
+      MissingBinding missingBinding, BindingGraph graph) {
+    ImmutableSet<Binding> alternativeBindings = graph.bindings(missingBinding.key());
+    if (alternativeBindings.isEmpty()) {
+      return "";
+    }
+    StringBuilder message = new StringBuilder();
+    message.append("\n\nNote: ")
+        .append(missingBinding.key())
+        .append(" is provided in the following other components:");
+    for (Binding alternativeBinding : alternativeBindings) {
+      // Some alternative bindings appear multiple times because they were re-resolved in multiple
+      // components (e.g. due to multibinding contributions). To avoid the noise, we only report
+      // the binding where the module is contributed.
+      if (alternativeBinding.contributingModule().isPresent()
+          && !((ComponentNodeImpl) graph.componentNode(alternativeBinding.componentPath()).get())
+              .componentDescriptor()
+              .moduleTypes()
+              .contains(alternativeBinding.contributingModule().get().xprocessing())) {
+        continue;
+      }
+      message.append("\n").append(INDENT).append(asString(alternativeBinding));
+    }
+    return message.toString();
+  }
+
+  private String similarBindingsMessage(
+      MissingBinding missingBinding, BindingGraph graph) {
+    ImmutableSet<Binding> similarBindings =
+        getSimilarTypeBindings(graph, missingBinding.key());
+    if (similarBindings.isEmpty()) {
+      return "";
+    }
+    StringBuilder message =
+        new StringBuilder(
+            "\n\nNote: A similar binding is provided in the following other components:");
+    for (Binding similarBinding : similarBindings) {
+      message
+          .append("\n")
+          .append(INDENT)
+          .append(similarBinding.key())
+          .append(" is provided at:")
+          .append("\n")
+          .append(DOUBLE_INDENT)
+          .append(asString(similarBinding));
+    }
+    message.append("\n")
+        .append(
+            "(For Kotlin sources, you may need to use '@JvmSuppressWildcards' or '@JvmWildcard' if "
+                + "you need to explicitly control the wildcards at a particular usage site.)");
+    return message.toString();
+  }
+
+  private String asString(Binding binding) {
+    return String.format(
+        "[%s] %s",
+        binding.componentPath().currentComponent().xprocessing().getQualifiedName(),
+        binding.bindingElement().isPresent()
+            ? elementToString(
+                binding.bindingElement().get().xprocessing(),
+                /* elideMethodParameterTypes= */ true)
+            // For synthetic bindings just print the Binding#toString()
+            : binding);
+  }
+
   private boolean allIncomingDependenciesCanUseProduction(
       MissingBinding missingBinding, BindingGraph graph) {
     return graph.network().inEdges(missingBinding).stream()
         .flatMap(instancesOf(DependencyEdge.class))
         .allMatch(edge -> dependencyCanBeProduction(edge, graph));
-  }
-
-  // TODO(ronshapiro): merge with
-  // ProvisionDependencyOnProduerBindingValidator.dependencyCanUseProduction
-  private boolean dependencyCanBeProduction(DependencyEdge edge, BindingGraph graph) {
-    Node source = graph.network().incidentNodes(edge).source();
-    if (source instanceof ComponentNode) {
-      return canBeSatisfiedByProductionBinding(edge.dependencyRequest().kind());
-    }
-    if (source instanceof Binding) {
-      return ((Binding) source).isProduction();
-    }
-    throw new IllegalArgumentException(
-        "expected a dagger.internal.codegen.model.Binding or ComponentNode: " + source);
   }
 
   private boolean typeHasInjectionSites(Key key) {
@@ -305,15 +288,11 @@ final class MissingBindingValidator extends ValidationBindingGraphPlugin {
         .orElse(false);
   }
 
-  private static String getComponentFromDependencyEdge(
-      DependencyEdge edge, BindingGraph graph, boolean completePath) {
-    ComponentPath componentPath = graph.network().incidentNodes(edge).source().componentPath();
-    return completePath
-        ? componentPath.toString()
-        : componentPath.currentComponent().className().canonicalName();
+  private static String getComponentFromDependencyEdge(DependencyEdge edge, BindingGraph graph) {
+    return source(edge, graph).componentPath().currentComponent().className().canonicalName();
   }
 
-  private Node source(Edge edge, BindingGraph graph) {
+  private static Node source(Edge edge, BindingGraph graph) {
     return graph.network().incidentNodes(edge).source();
   }
 

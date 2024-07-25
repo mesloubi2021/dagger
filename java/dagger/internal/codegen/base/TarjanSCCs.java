@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.lang.Math.min;
 
 import com.google.common.collect.ImmutableCollection;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -39,7 +40,7 @@ import java.util.Set;
 public final class TarjanSCCs {
 
   /** Returns the set of strongly connected components in reverse topological order. */
-  public static <NodeT> ImmutableSet<ImmutableSet<NodeT>> compute(
+  public static <NodeT> ImmutableList<ImmutableSet<NodeT>> compute(
       ImmutableCollection<NodeT> nodes, SuccessorsFunction<NodeT> successorsFunction) {
     return new TarjanSCC<>(nodes, successorsFunction).compute();
   }
@@ -62,14 +63,14 @@ public final class TarjanSCCs {
       this.lowLinks = Maps.newHashMapWithExpectedSize(nodes.size());
     }
 
-    private ImmutableSet<ImmutableSet<NodeT>> compute() {
+    private ImmutableList<ImmutableSet<NodeT>> compute() {
       checkState(indexes.isEmpty(), "TarjanSCC#compute() can only be called once per instance!");
       for (NodeT node : nodes) {
         if (!indexes.containsKey(node)) {
           stronglyConnect(node);
         }
       }
-      return ImmutableSet.copyOf(stronglyConnectedComponents);
+      return ImmutableList.copyOf(stronglyConnectedComponents);
     }
 
     private void stronglyConnect(NodeT node) {

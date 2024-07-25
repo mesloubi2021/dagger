@@ -59,6 +59,11 @@ public final class KspComponentProcessor extends KspBasicAnnotationProcessor {
   }
 
   @Override
+  public void preRound(XProcessingEnv env, XRoundEnv roundEnv) {
+    delegate.onProcessingRoundBegin();
+  }
+
+  @Override
   public void postRound(XProcessingEnv env, XRoundEnv roundEnv) {
     delegate.postRound(env, roundEnv);
   }

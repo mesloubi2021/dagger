@@ -16,13 +16,7 @@
 
 package dagger.internal.codegen.binding;
 
-import static com.google.common.base.Suppliers.memoize;
-import static dagger.internal.codegen.xprocessing.XElements.isAbstract;
-import static dagger.internal.codegen.xprocessing.XElements.isStatic;
-
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import dagger.internal.codegen.model.BindingKind;
 import dagger.internal.codegen.model.DependencyRequest;
 import dagger.internal.codegen.model.Scope;
@@ -40,12 +34,7 @@ public abstract class Binding extends BindingDeclaration {
    * Returns {@code true} if using this binding requires an instance of the {@link
    * #contributingModule()}.
    */
-  public boolean requiresModuleInstance() {
-    return contributingModule().isPresent()
-        && bindingElement().isPresent()
-        && !isAbstract(bindingElement().get())
-        && !isStatic(bindingElement().get());
-  }
+  public abstract boolean requiresModuleInstance();
 
   /**
    * Returns {@code true} if this binding may provide {@code null} instead of an instance of {@link
@@ -65,38 +54,8 @@ public abstract class Binding extends BindingDeclaration {
     return FrameworkType.forBindingType(bindingType());
   }
 
-  /**
-   * The explicit set of {@link DependencyRequest dependencies} required to satisfy this binding as
-   * defined by the user-defined injection sites.
-   */
-  public abstract ImmutableSet<DependencyRequest> explicitDependencies();
-
-  /**
-   * The set of {@link DependencyRequest dependencies} that are added by the framework rather than a
-   * user-defined injection site. This returns an unmodifiable set.
-   */
-  public ImmutableSet<DependencyRequest> implicitDependencies() {
-    return ImmutableSet.of();
-  }
-
-  private final Supplier<ImmutableSet<DependencyRequest>> dependencies =
-      memoize(
-          () -> {
-            ImmutableSet<DependencyRequest> implicitDependencies = implicitDependencies();
-            return ImmutableSet.copyOf(
-                implicitDependencies.isEmpty()
-                    ? explicitDependencies()
-                    : Sets.union(implicitDependencies, explicitDependencies()));
-          });
-
-  /**
-   * The set of {@link DependencyRequest dependencies} required to satisfy this binding. This is the
-   * union of {@link #explicitDependencies()} and {@link #implicitDependencies()}. This returns an
-   * unmodifiable set.
-   */
-  public final ImmutableSet<DependencyRequest> dependencies() {
-    return dependencies.get();
-  }
+  /** The set of {@link DependencyRequest dependencies} required to satisfy this binding. */
+  public abstract ImmutableSet<DependencyRequest> dependencies();
 
   /**
    * If this binding's key's type parameters are different from those of the {@link
@@ -105,7 +64,6 @@ public abstract class Binding extends BindingDeclaration {
    */
   public abstract Optional<? extends Binding> unresolved();
 
-  public Optional<Scope> scope() {
-    return Optional.empty();
-  }
+  /** Returns the optional scope used on the binding. */
+  public abstract Optional<Scope> scope();
 }

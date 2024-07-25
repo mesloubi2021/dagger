@@ -16,14 +16,11 @@
 
 package dagger.internal.codegen.binding;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static dagger.internal.codegen.binding.BindingType.PRODUCTION;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import dagger.BindsOptionalOf;
-import dagger.Module;
 import dagger.internal.codegen.model.BindingKind;
 import dagger.internal.codegen.model.ComponentPath;
 import dagger.internal.codegen.model.DaggerElement;
@@ -31,8 +28,8 @@ import dagger.internal.codegen.model.DaggerTypeElement;
 import dagger.internal.codegen.model.DependencyRequest;
 import dagger.internal.codegen.model.Key;
 import dagger.internal.codegen.model.Scope;
-import dagger.multibindings.Multibinds;
 import java.util.Optional;
+import javax.inject.Inject;
 
 /**
  * An implementation of {@link dagger.internal.codegen.model.Binding} that also exposes {@link
@@ -43,24 +40,6 @@ import java.util.Optional;
 // could also implement.
 @AutoValue
 public abstract class BindingNode implements dagger.internal.codegen.model.Binding {
-  public static BindingNode create(
-      ComponentPath component,
-      Binding delegate,
-      ImmutableSet<MultibindingDeclaration> multibindingDeclarations,
-      ImmutableSet<OptionalBindingDeclaration> optionalBindingDeclarations,
-      ImmutableSet<SubcomponentDeclaration> subcomponentDeclarations,
-      BindingDeclarationFormatter bindingDeclarationFormatter) {
-    BindingNode node =
-        new AutoValue_BindingNode(
-            component,
-            delegate,
-            multibindingDeclarations,
-            optionalBindingDeclarations,
-            subcomponentDeclarations);
-    node.bindingDeclarationFormatter = checkNotNull(bindingDeclarationFormatter);
-    return node;
-  }
-
   private BindingDeclarationFormatter bindingDeclarationFormatter;
 
   public abstract Binding delegate();
@@ -134,5 +113,50 @@ public abstract class BindingNode implements dagger.internal.codegen.model.Bindi
   @Override
   public final String toString() {
     return bindingDeclarationFormatter.format(delegate());
+  }
+
+  static final class Factory {
+    private final BindingDeclarationFormatter bindingDeclarationFormatter;
+
+    @Inject
+    Factory(BindingDeclarationFormatter bindingDeclarationFormatter) {
+      this.bindingDeclarationFormatter = bindingDeclarationFormatter;
+    }
+
+    public BindingNode forContributionBindings(
+        ComponentPath component,
+        ContributionBinding delegate,
+        Iterable<MultibindingDeclaration> multibindingDeclarations,
+        Iterable<OptionalBindingDeclaration> optionalBindingDeclarations,
+        Iterable<SubcomponentDeclaration> subcomponentDeclarations) {
+      return create(
+          component,
+          delegate,
+          ImmutableSet.copyOf(multibindingDeclarations),
+          ImmutableSet.copyOf(optionalBindingDeclarations),
+          ImmutableSet.copyOf(subcomponentDeclarations));
+    }
+
+    public BindingNode forMembersInjectionBinding(
+        ComponentPath component, MembersInjectionBinding delegate) {
+      return create(component, delegate, ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of());
+    }
+
+    private BindingNode create(
+        ComponentPath component,
+        Binding delegate,
+        ImmutableSet<MultibindingDeclaration> multibindingDeclarations,
+        ImmutableSet<OptionalBindingDeclaration> optionalBindingDeclarations,
+        ImmutableSet<SubcomponentDeclaration> subcomponentDeclarations) {
+      BindingNode node =
+          new AutoValue_BindingNode(
+              component,
+              delegate,
+              multibindingDeclarations,
+              optionalBindingDeclarations,
+              subcomponentDeclarations);
+      node.bindingDeclarationFormatter = bindingDeclarationFormatter;
+      return node;
+    }
   }
 }

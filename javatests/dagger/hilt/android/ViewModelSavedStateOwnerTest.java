@@ -17,12 +17,14 @@
 package dagger.hilt.android;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import android.os.Build;
 import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.lifecycle.SavedStateHandle;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
@@ -31,17 +33,20 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import dagger.hilt.android.lifecycle.ActivityRetainedSavedState;
 import dagger.hilt.android.lifecycle.HiltViewModel;
 import dagger.hilt.android.testing.HiltAndroidRule;
 import dagger.hilt.android.testing.HiltAndroidTest;
 import dagger.hilt.android.testing.HiltTestApplication;
 import javax.inject.Inject;
+import javax.inject.Provider;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.annotation.Config;
 
 /** Test that you can use the Hilt ViewModel factory with other owners. */
+@OptIn(markerClass = UnstableApi.class)
 @HiltAndroidTest
 @RunWith(AndroidJUnit4.class)
 // Robolectric requires Java9 to run API 29 and above, so use API 28 instead
@@ -49,6 +54,40 @@ import org.robolectric.annotation.Config;
 public class ViewModelSavedStateOwnerTest {
 
   @Rule public final HiltAndroidRule rule = new HiltAndroidRule(this);
+
+  @Test
+  public void activityRetainedComponentSaveState_configurationChange_successfullySavedState() {
+    try (ActivityScenario<TestActivity> scenario = ActivityScenario.launch(TestActivity.class)) {
+      scenario.onActivity(
+          activity -> {
+            assertThat((String) activity.savedStateHandle.get("argument_key")).isNull();
+            activity.savedStateHandle.set("other_key", "activity_other_key");
+          });
+      scenario.recreate();
+      scenario.onActivity(
+          activity -> {
+            assertThat((String) activity.savedStateHandle.get("argument_key")).isNull();
+            assertThat((String) activity.savedStateHandle.get("other_key"))
+                .isEqualTo("activity_other_key");
+          });
+    }
+  }
+
+  @Test
+  public void firstTimeAccessToActivityRetainedSaveState_inActivityOnDestroy_fails() {
+    Exception exception =
+        assertThrows(
+            NullPointerException.class,
+            () -> {
+              try (ActivityScenario<ErrorTestActivity> scenario =
+                  ActivityScenario.launch(ErrorTestActivity.class)) {}
+            });
+    assertThat(exception)
+        .hasMessageThat()
+        .contains(
+            "The first access to SavedStateHandle should happen between super.onCreate() and"
+                + " super.onDestroy()");
+  }
 
   @Test
   public void testViewModelSavedState() {
@@ -156,10 +195,27 @@ public class ViewModelSavedStateOwnerTest {
 
   @AndroidEntryPoint(FragmentActivity.class)
   public static class TestActivity extends Hilt_ViewModelSavedStateOwnerTest_TestActivity {
+    @Inject @ActivityRetainedSavedState Provider<SavedStateHandle> provider;
+    SavedStateHandle savedStateHandle;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
+      savedStateHandle = provider.get();
       setContentView(R.layout.navigation_activity);
+    }
+  }
+
+  @AndroidEntryPoint(FragmentActivity.class)
+  public static class ErrorTestActivity
+      extends Hilt_ViewModelSavedStateOwnerTest_ErrorTestActivity {
+    @Inject @ActivityRetainedSavedState Provider<SavedStateHandle> provider;
+
+    @SuppressWarnings("unused")
+    @Override
+    protected void onDestroy() {
+      super.onDestroy();
+      SavedStateHandle savedStateHandle = provider.get();
     }
   }
 

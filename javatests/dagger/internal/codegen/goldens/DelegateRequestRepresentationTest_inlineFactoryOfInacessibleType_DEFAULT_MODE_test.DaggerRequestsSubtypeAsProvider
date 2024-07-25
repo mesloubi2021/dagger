@@ -15,7 +15,9 @@ import other.Supertype;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerRequestsSubtypeAsProvider {
   private DaggerRequestsSubtypeAsProvider() {
@@ -48,7 +50,7 @@ final class DaggerRequestsSubtypeAsProvider {
 
     @Override
     public Provider<Supertype> supertypeProvider() {
-      return ((Provider) Subtype_Factory.create());
+      return ((dagger.internal.Provider) Subtype_Factory.create());
     }
   }
 }

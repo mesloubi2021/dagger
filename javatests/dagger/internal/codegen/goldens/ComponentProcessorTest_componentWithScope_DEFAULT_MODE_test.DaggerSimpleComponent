@@ -3,8 +3,8 @@ package test;
 import dagger.Lazy;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.DoubleCheck;
+import dagger.internal.Provider;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -15,7 +15,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerSimpleComponent {
   private DaggerSimpleComponent() {
@@ -65,7 +67,7 @@ final class DaggerSimpleComponent {
     }
 
     @Override
-    public Provider<SomeInjectableType> someInjectableTypeProvider() {
+    public javax.inject.Provider<SomeInjectableType> someInjectableTypeProvider() {
       return someInjectableTypeProvider;
     }
   }

@@ -84,6 +84,10 @@ public final class ExternalBindingGraphPlugins {
     plugin.init(SpiModelBindingGraphConverter.toSpiModel(processingEnv), filteredOptions);
   }
 
+  public void onProcessingRoundBegin() {
+    plugins.forEach(BindingGraphPlugin::onProcessingRoundBegin);
+  }
+
   private void initializeLegacyPlugin(dagger.spi.BindingGraphPlugin plugin) {
     plugin.initFiler(toJavac(filer));
     plugin.initTypes(toJavac(processingEnv).getTypeUtils()); // ALLOW_TYPES_ELEMENTS

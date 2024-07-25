@@ -26,56 +26,40 @@ import javax.inject.Qualifier
 @Component(modules = [TestKotlinModuleWithQualifier::class])
 interface TestKotlinComponentWithQualifier {
   fun inject(testInjectedClassWithQualifier: TestMemberInjectedClassWithQualifier)
+
   fun inject(fooWithInjectedQualifier: FooWithInjectedQualifier)
 }
 
 @Module
 class TestKotlinModuleWithQualifier {
-  @Provides
-  @JavaTestQualifier
-  fun provideJavaDataA() = TestDataA("test")
+  @Provides @JavaTestQualifier fun provideJavaDataA() = TestDataA("test")
 
-  @Provides
-  @JavaTestQualifier
-  fun provideJavaDataB() = TestDataB("test")
+  @Provides @JavaTestQualifier fun provideJavaDataB() = TestDataB("test")
 
-  @Provides
-  @JavaTestQualifierWithTarget
-  fun provideJavaWithTargetDataA() = TestDataA("test")
+  @Provides @JavaTestQualifierWithTarget fun provideJavaWithTargetDataA() = TestDataA("test")
 
-  @Provides
-  @KotlinTestQualifier
-  fun provideKotlinDataA() = TestDataA("test")
+  @Provides @KotlinTestQualifier fun provideKotlinDataA() = TestDataA("test")
 
-  @Provides
-  @JavaTestQualifier
-  fun provideString() = "qualified string"
+  @Provides @JavaTestQualifier fun provideString() = "qualified string"
 }
 
-class TestConstructionInjectedClassWithQualifier @Inject constructor(
-  @JavaTestQualifier val data: TestDataA
-)
+class TestConstructionInjectedClassWithQualifier
+@Inject
+constructor(@JavaTestQualifier val data: TestDataA)
 
 @TriggerGeneratedTypeProcessor
 class TestMemberInjectedClassWithQualifier {
-  @Inject
-  @JavaTestQualifier
-  lateinit var javaDataA: TestDataA
+  @Inject @JavaTestQualifier lateinit var javaDataA: TestDataA
 
-  @Inject
-  @field:JavaTestQualifier
-  lateinit var javaDataB: TestDataB
+  @Inject @field:JavaTestQualifier lateinit var javaDataB: TestDataB
 
-  @Inject
-  @JavaTestQualifierWithTarget
-  lateinit var javaWithTargetDataA: TestDataA
+  @Inject @JavaTestQualifierWithTarget lateinit var javaWithTargetDataA: TestDataA
 
-  @Inject
-  @JavaTestQualifier
-  lateinit var kotlinDataA: TestDataA
+  @Inject @KotlinTestQualifier lateinit var kotlinDataA: TestDataA
 
-  @Inject
-  lateinit var dataWithConstructionInjection: TestConstructionInjectedClassWithQualifier
+  @set:Inject @setparam:KotlinTestQualifier var kotlinDataA2: TestDataA? = null
+
+  @Inject lateinit var dataWithConstructionInjection: TestConstructionInjectedClassWithQualifier
 
   val noBackingFieldProperty: Int
     get() = 0
@@ -88,8 +72,14 @@ class TestMemberInjectedClassWithQualifier {
 }
 
 data class TestDataA(val data: String)
+
 data class TestDataB(val data: String)
 
-@Qualifier
-@Retention(AnnotationRetention.RUNTIME)
-annotation class KotlinTestQualifier
+@Target(
+  AnnotationTarget.FUNCTION,
+  AnnotationTarget.PROPERTY,
+  AnnotationTarget.VALUE_PARAMETER,
+  AnnotationTarget.FIELD,
+  AnnotationTarget.PROPERTY_SETTER,
+)
+@Qualifier @Retention(AnnotationRetention.RUNTIME) annotation class KotlinTestQualifier

@@ -30,13 +30,12 @@ import androidx.room.compiler.processing.XTypeElement;
 import androidx.room.compiler.processing.XTypeParameterElement;
 import com.google.common.collect.ImmutableSet;
 import com.squareup.javapoet.ClassName;
-import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 import dagger.hilt.android.processor.internal.AndroidClassNames;
+import dagger.hilt.processor.internal.ClassNames;
 import dagger.hilt.processor.internal.Processors;
 import dagger.internal.codegen.xprocessing.XExecutableTypes;
 import java.io.IOException;
@@ -69,10 +68,17 @@ public final class BroadcastReceiverGenerator {
             .addModifiers(metadata.generatedClassModifiers())
             .addMethod(onReceiveMethod());
 
+    // Add an annotation used as a marker to let the bytecode injector know this receiver
+    // will need to be injected with a super.onReceive call. This is only necessary if no concrete
+    // onReceive call is implemented in any of the super classes.
+    if (metadata.requiresBytecodeInjection() && !isOnReceiveImplemented(metadata.baseElement())) {
+      builder.addAnnotation(ClassNames.ON_RECEIVE_BYTECODE_INJECTION_MARKER);
+    }
+
     JavaPoetExtKt.addOriginatingElement(builder, metadata.element());
     Generators.addGeneratedBaseClassJavadoc(builder, AndroidClassNames.ANDROID_ENTRY_POINT);
     Processors.addGeneratedAnnotation(builder, env, getClass());
-    Generators.copyConstructors(metadata.baseElement(), builder);
+    Generators.copyConstructors(metadata.baseElement(), builder, metadata.element());
 
     metadata.baseElement().getTypeParameters().stream()
         .map(XTypeParameterElement::getTypeVariableName)
@@ -81,20 +87,6 @@ public final class BroadcastReceiverGenerator {
     Generators.addInjectionMethods(metadata, builder);
     Generators.copyLintAnnotations(metadata.element(), builder);
     Generators.copySuppressAnnotations(metadata.element(), builder);
-
-    // Add an unused field used as a marker to let the bytecode injector know this receiver will
-    // need to be injected with a super.onReceive call. This is only necessary if no concrete
-    // onReceive call is implemented in any of the super classes.
-    if (metadata.requiresBytecodeInjection() && !isOnReceiveImplemented(metadata.baseElement())) {
-      builder.addField(
-          FieldSpec.builder(
-                  TypeName.BOOLEAN,
-                  "onReceiveBytecodeInjectionMarker",
-                  Modifier.PRIVATE,
-                  Modifier.FINAL)
-              .initializer("false")
-              .build());
-    }
 
     env.getFiler()
         .write(

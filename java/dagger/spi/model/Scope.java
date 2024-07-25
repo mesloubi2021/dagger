@@ -80,8 +80,7 @@ public abstract class Scope {
   }
 
   /**
-   * Returns {@code true} if this scope is the {@link
-   * dagger.producers.ProductionScope @ProductionScope} scope.
+   * Returns {@code true} if this scope is the {@code @ProductionScope} scope.
    */
   public final boolean isProductionScope() {
     return isScope(PRODUCTION_SCOPE);

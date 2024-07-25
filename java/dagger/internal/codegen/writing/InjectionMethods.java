@@ -34,7 +34,6 @@ import static dagger.internal.codegen.javapoet.CodeBlocks.makeParametersCodeBloc
 import static dagger.internal.codegen.javapoet.CodeBlocks.toConcatenatedCodeBlock;
 import static dagger.internal.codegen.javapoet.CodeBlocks.toParametersCodeBlock;
 import static dagger.internal.codegen.javapoet.TypeNames.rawTypeName;
-import static dagger.internal.codegen.langmodel.Accessibility.isElementAccessibleFrom;
 import static dagger.internal.codegen.langmodel.Accessibility.isRawTypeAccessible;
 import static dagger.internal.codegen.langmodel.Accessibility.isRawTypePubliclyAccessible;
 import static dagger.internal.codegen.xprocessing.XElements.asConstructor;
@@ -69,6 +68,9 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.TypeName;
 import dagger.internal.Preconditions;
 import dagger.internal.codegen.base.UniqueNameSet;
+import dagger.internal.codegen.binding.AssistedInjectionBinding;
+import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.binding.InjectionBinding;
 import dagger.internal.codegen.binding.MembersInjectionBinding.InjectionSite;
 import dagger.internal.codegen.binding.Nullability;
 import dagger.internal.codegen.binding.ProvisionBinding;
@@ -115,10 +117,9 @@ final class InjectionMethods {
     private static final ImmutableSet<String> BANNED_PROXY_NAMES = ImmutableSet.of("get", "create");
 
     /**
-     * Returns a method that invokes the binding's {@linkplain ProvisionBinding#bindingElement()
-     * constructor} and injects the instance's members.
+     * Returns a method that invokes the binding's constructor and injects the instance's members.
      */
-    static MethodSpec create(ProvisionBinding binding, CompilerOptions compilerOptions) {
+    static MethodSpec create(ContributionBinding binding, CompilerOptions compilerOptions) {
       XExecutableElement executableElement = asExecutable(binding.bindingElement().get());
       if (isConstructor(executableElement)) {
         return constructorProxy(asConstructor(executableElement));
@@ -142,7 +143,7 @@ final class InjectionMethods {
      * {@code dependencyUsage} function.
      */
     static CodeBlock invoke(
-        ProvisionBinding binding,
+        ContributionBinding binding,
         Function<DependencyRequest, CodeBlock> dependencyUsage,
         Function<XExecutableParameterElement, String> uniqueAssistedParameterName,
         ClassName requestingClass,
@@ -159,11 +160,11 @@ final class InjectionMethods {
     }
 
     static ImmutableList<CodeBlock> invokeArguments(
-        ProvisionBinding binding,
+        ContributionBinding binding,
         Function<DependencyRequest, CodeBlock> dependencyUsage,
         Function<XExecutableParameterElement, String> uniqueAssistedParameterName) {
       ImmutableMap<XExecutableParameterElement, DependencyRequest> dependencyRequestMap =
-          binding.provisionDependencies().stream()
+          provisionDependencies(binding).stream()
               .collect(
                   toImmutableMap(
                       request -> asMethodParameter(request.requestElement().get().xprocessing()),
@@ -185,6 +186,20 @@ final class InjectionMethods {
       return arguments.build();
     }
 
+    private static ImmutableSet<DependencyRequest> provisionDependencies(
+        ContributionBinding binding) {
+      switch (binding.kind()) {
+        case INJECTION:
+          return ((InjectionBinding) binding).constructorDependencies();
+        case ASSISTED_INJECTION:
+          return ((AssistedInjectionBinding) binding).constructorDependencies();
+        case PROVISION:
+          return ((ProvisionBinding) binding).dependencies();
+        default:
+          throw new AssertionError("Unexpected binding kind: " + binding.kind());
+      }
+    }
+
     private static MethodSpec constructorProxy(XConstructorElement constructor) {
       XTypeElement enclosingType = constructor.getEnclosingElement();
       MethodSpec.Builder builder =
@@ -201,22 +216,6 @@ final class InjectionMethods {
       return builder
           .addStatement("return new $T($L)", enclosingType.getType().getTypeName(), arguments)
           .build();
-    }
-
-    /**
-     * Returns {@code true} if injecting an instance of {@code binding} from {@code callingPackage}
-     * requires the use of an injection method.
-     */
-    static boolean requiresInjectionMethod(
-        ProvisionBinding binding, CompilerOptions compilerOptions, ClassName requestingClass) {
-      XExecutableElement executableElement = asExecutable(binding.bindingElement().get());
-      return !binding.injectionSites().isEmpty()
-          || binding.shouldCheckForNull(compilerOptions)
-          || !isElementAccessibleFrom(executableElement, requestingClass.packageName())
-          // This check should be removable once we drop support for -source 7
-          || executableElement.getParameters().stream()
-              .map(XExecutableParameterElement::getType)
-              .anyMatch(type -> !isRawTypeAccessible(type, requestingClass.packageName()));
     }
   }
 
@@ -364,7 +363,7 @@ final class InjectionMethods {
           : CodeBlock.of("$T.checkNotNullFromProvides($L)", Preconditions.class, maybeNull);
     }
 
-    static CheckNotNullPolicy get(ProvisionBinding binding, CompilerOptions compilerOptions) {
+    static CheckNotNullPolicy get(ContributionBinding binding, CompilerOptions compilerOptions) {
       return binding.shouldCheckForNull(compilerOptions) ? CHECK_FOR_NULL : IGNORE;
     }
   }
@@ -405,10 +404,9 @@ final class InjectionMethods {
     if (isVoid(method.getReturnType())) {
       return builder.addStatement("$L", invocation).build();
     } else {
-      Nullability.of(method)
+      Nullability nullability = Nullability.of(method);
+      nullability
           .nullableAnnotations()
-          .stream()
-          .map(XAnnotations::getClassName)
           .forEach(builder::addAnnotation);
       return builder
           .returns(method.getReturnType().getTypeName())

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 #############################
@@ -26,39 +27,66 @@ local_repository(
 )
 
 #############################
-# Load Bazel-Common repository
-#############################
-
-http_archive(
-    name = "google_bazel_common",
-    sha256 = "60a9aebe25f476646f61c041d1679a9b21076deffbd51526838c7f24d6468ac0",
-    strip_prefix = "bazel-common-227a23a508a2fab0fa67ffe2d9332ae536a40edc",
-    urls = ["https://github.com/google/bazel-common/archive/227a23a508a2fab0fa67ffe2d9332ae536a40edc.zip"],
-)
-
-load("@google_bazel_common//:workspace_defs.bzl", "google_common_workspace_rules")
-
-google_common_workspace_rules()
-
-#############################
 # Load Bazel Skylib rules
 #############################
 
-BAZEL_SKYLIB_VERSION = "1.2.1"
+BAZEL_SKYLIB_VERSION = "1.5.0"
 
-BAZEL_SKYLIB_SHA = "f7be3474d42aae265405a592bb7da8e171919d74c16f082a5457840f06054728"
+BAZEL_SKYLIB_SHA = "cd55a062e763b9349921f0f5db8c3933288dc8ba4f76dd9416aac68acee3cb94"
 
 http_archive(
     name = "bazel_skylib",
     sha256 = BAZEL_SKYLIB_SHA,
     urls = [
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/{version}/bazel-skylib-{version}.tar.gz".format(version = BAZEL_SKYLIB_VERSION),
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/%s/bazel-skylib-%s.tar.gz" % (BAZEL_SKYLIB_VERSION, BAZEL_SKYLIB_VERSION),
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/%s/bazel-skylib-%s.tar.gz" % (BAZEL_SKYLIB_VERSION, BAZEL_SKYLIB_VERSION),
     ],
 )
 
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 
 bazel_skylib_workspace()
+
+#############################
+# Load rules_java repository
+#############################
+
+http_archive(
+    name = "rules_java",
+    sha256 = "c73336802d0b4882e40770666ad055212df4ea62cfa6edf9cb0f9d29828a0934",
+    url = "https://github.com/bazelbuild/rules_java/releases/download/5.3.5/rules_java-5.3.5.tar.gz",
+)
+
+#############################
+# Load Android Sdk
+#############################
+
+android_sdk_repository(
+    name = "androidsdk",
+    api_level = 32,
+    build_tools_version = "32.0.0",
+)
+
+####################################################
+# Load Protobuf repository (needed by bazel-common)
+####################################################
+
+http_archive(
+    name = "rules_proto",
+    # output from `sha256sum` on the downloaded tar.gz file
+    sha256 = "66bfdf8782796239d3875d37e7de19b1d94301e8972b3cbd2446b332429b4df1",
+    strip_prefix = "rules_proto-4.0.0",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_proto/archive/refs/tags/4.0.0.tar.gz",
+        "https://github.com/bazelbuild/rules_proto/archive/refs/tags/4.0.0.tar.gz",
+    ],
+)
+
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+
+rules_proto_dependencies()
+
+rules_proto_toolchains()
 
 #############################
 # Load Protobuf dependencies
@@ -119,10 +147,10 @@ http_archive(
 
 load("@io_bazel_rules_kotlin//kotlin:repositories.bzl", "kotlin_repositories", "kotlinc_version")
 
-KOTLIN_VERSION = "1.9.0"
+KOTLIN_VERSION = "1.9.23"
 
 # Get from https://github.com/JetBrains/kotlin/releases/
-KOTLINC_RELEASE_SHA = "1fc50d805f9809e92de43e91f089cc8618567c1a350faebdabf8a40c5048bee8"
+KOTLINC_RELEASE_SHA = "93137d3aab9afa9b27cb06a824c2324195c6b6f6179d8a8653f440f5bd58be88"
 
 kotlin_repositories(
     compiler_release = kotlinc_version(
@@ -139,9 +167,9 @@ kt_register_toolchains()
 # Load Maven dependencies
 #############################
 
-RULES_JVM_EXTERNAL_TAG = "4.2"
+RULES_JVM_EXTERNAL_TAG = "4.5"
 
-RULES_JVM_EXTERNAL_SHA = "cd1a77b7b02e8e008439ca76fd34f5b07aecb8c752961f9640dea15e9e5ba1ca"
+RULES_JVM_EXTERNAL_SHA = "b17d7388feb9bfa7f2fa09031b32707df529f26c91ab9e5d909eb1676badd9a6"
 
 http_archive(
     name = "rules_jvm_external",
@@ -154,28 +182,37 @@ load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 ANDROID_LINT_VERSION = "30.1.0"
 
+ANT_VERSION = "1.9.6"
+
+ASM_VERSION = "9.6"
+
 AUTO_COMMON_VERSION = "1.2.1"
-
-# NOTE(bcorso): Even though we set the version here, our Guava version in
-#  processor code will use whatever version is built into JavaBuilder, which is
-#  tied to the version of Bazel we're using.
-GUAVA_VERSION = "27.1"
-
-GRPC_VERSION = "1.2.0"
-
-INCAP_VERSION = "0.2"
 
 BYTE_BUDDY_VERSION = "1.9.10"
 
 CHECKER_FRAMEWORK_VERSION = "2.5.3"
 
+ECLIPSE_SISU_VERSION = "0.3.0"
+
 ERROR_PRONE_VERSION = "2.14.0"
 
-KSP_VERSION = KOTLIN_VERSION + "-1.0.12"
+# NOTE(bcorso): Even though we set the version here, our Guava version in
+#  processor code will use whatever version is built into JavaBuilder, which is
+#  tied to the version of Bazel we're using.
+GUAVA_VERSION = "33.0.0"
+
+GRPC_VERSION = "1.2.0"
+
+INCAP_VERSION = "0.2"
+
+KSP_VERSION = KOTLIN_VERSION + "-1.0.19"
+
+MAVEN_VERSION = "3.3.3"
 
 maven_install(
     artifacts = [
         "androidx.annotation:annotation:1.1.0",
+        "androidx.annotation:annotation-experimental:1.3.1",
         "androidx.appcompat:appcompat:1.3.1",
         "androidx.activity:activity:1.5.1",
         "androidx.fragment:fragment:1.5.1",
@@ -220,7 +257,7 @@ maven_install(
         "com.google.guava:guava-beta-checker:1.0",
         "com.google.protobuf:protobuf-java:3.7.0",
         "com.google.testing.compile:compile-testing:0.18",
-        "com.google.truth:truth:1.1",
+        "com.google.truth:truth:1.4.0",
         "com.squareup:javapoet:1.13.0",
         "com.squareup:kotlinpoet:1.11.0",
         "io.github.java-diff-utils:java-diff-utils:4.11",
@@ -230,6 +267,7 @@ maven_install(
         "io.grpc:grpc-protobuf:%s" % GRPC_VERSION,
         "jakarta.inject:jakarta.inject-api:2.0.1",
         "javax.annotation:javax.annotation-api:1.3.2",
+        "javax.enterprise:cdi-api:1.0",
         "javax.inject:javax.inject:1",
         "javax.inject:javax.inject-tck:1",
         "junit:junit:4.13",
@@ -237,9 +275,19 @@ maven_install(
         "net.bytebuddy:byte-buddy-agent:%s" % BYTE_BUDDY_VERSION,
         "net.ltgt.gradle.incap:incap:%s" % INCAP_VERSION,
         "net.ltgt.gradle.incap:incap-processor:%s" % INCAP_VERSION,
+        "org.apache.ant:ant:%s" % ANT_VERSION,
+        "org.apache.ant:ant-launcher:%s" % ANT_VERSION,
+        "org.apache.maven:maven-artifact:%s" % MAVEN_VERSION,
+        "org.apache.maven:maven-model:%s" % MAVEN_VERSION,
+        "org.apache.maven:maven-plugin-api:%s" % MAVEN_VERSION,
         "org.checkerframework:checker-compat-qual:%s" % CHECKER_FRAMEWORK_VERSION,
         "org.checkerframework:dataflow:%s" % CHECKER_FRAMEWORK_VERSION,
         "org.checkerframework:javacutil:%s" % CHECKER_FRAMEWORK_VERSION,
+        "org.codehaus.plexus:plexus-utils:3.0.20",
+        "org.codehaus.plexus:plexus-classworlds:2.5.2",
+        "org.codehaus.plexus:plexus-component-annotations:1.5.5",
+        "org.eclipse.sisu:org.eclipse.sisu.plexus:%s" % ECLIPSE_SISU_VERSION,
+        "org.eclipse.sisu:org.eclipse.sisu.inject:%s" % ECLIPSE_SISU_VERSION,
         "org.hamcrest:hamcrest-core:1.3",
         "org.jetbrains.kotlin:kotlin-annotation-processing-embeddable:%s" % KOTLIN_VERSION,
         "org.jetbrains.kotlin:kotlin-compiler-embeddable:%s" % KOTLIN_VERSION,
@@ -248,7 +296,11 @@ maven_install(
         "org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.6.2",
         "org.jspecify:jspecify:0.3.0",
         "org.mockito:mockito-core:2.28.2",
+        "org.pantsbuild:jarjar:1.7.2",
         "org.objenesis:objenesis:1.0",
+        "org.ow2.asm:asm:%s" % ASM_VERSION,
+        "org.ow2.asm:asm-tree:%s" % ASM_VERSION,
+        "org.ow2.asm:asm-commons:%s" % ASM_VERSION,
         "org.robolectric:robolectric:4.4",
         "org.robolectric:shadows-framework:4.4",  # For ActivityController
     ],

@@ -16,9 +16,12 @@
 
 package dagger.internal;
 
+import static dagger.internal.DaggerCollections.newLinkedHashMapWithExpectedSize;
+import static dagger.internal.Providers.asDaggerProvider;
+
 import dagger.Lazy;
+import java.util.Collections;
 import java.util.Map;
-import javax.inject.Provider;
 
 /**
  * A {@link Factory} implementation used to implement {@link Map} bindings. This factory returns a
@@ -57,10 +60,41 @@ public final class MapProviderFactory<K, V> extends AbstractMapFactory<K, V, Pro
       return this;
     }
 
+    /**
+     * Legacy javax version of the method to support libraries compiled with an older version of
+     * Dagger. Do not use directly.
+     */
+    @Deprecated
+    public Builder<K, V> put(K key, javax.inject.Provider<V> providerOfValue) {
+      return put(key, asDaggerProvider(providerOfValue));
+    }
+
     @Override
     public Builder<K, V> putAll(Provider<Map<K, Provider<V>>> mapProviderFactory) {
       super.putAll(mapProviderFactory);
       return this;
+    }
+
+    /**
+     * Legacy javax version of the method to support libraries compiled with an older version of
+     * Dagger. Do not use directly.
+     */
+    @Deprecated
+    public Builder<K, V> putAll(
+        final javax.inject.Provider<Map<K, javax.inject.Provider<V>>> mapProviderFactory) {
+      return putAll(new Provider<Map<K, Provider<V>>>() {
+          @Override public Map<K, Provider<V>> get() {
+            Map<K, javax.inject.Provider<V>> javaxMap = mapProviderFactory.get();
+            if (javaxMap.isEmpty()) {
+              return Collections.emptyMap();
+            }
+            Map<K, Provider<V>> daggerMap = newLinkedHashMapWithExpectedSize(javaxMap.size());
+            for (Map.Entry<K, javax.inject.Provider<V>> e : javaxMap.entrySet()) {
+              daggerMap.put(e.getKey(), asDaggerProvider(e.getValue()));
+            }
+            return Collections.unmodifiableMap(daggerMap);
+          }
+      });
     }
 
     /** Returns a new {@link MapProviderFactory}. */

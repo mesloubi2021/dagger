@@ -27,6 +27,7 @@ import dagger.multibindings.ElementsIntoSet;
 import dagger.multibindings.IntKey;
 import dagger.multibindings.IntoMap;
 import dagger.multibindings.IntoSet;
+import dagger.multibindings.LazyClassKey;
 import dagger.multibindings.Multibinds;
 import dagger.producers.Produced;
 import dagger.producers.ProducerModule;
@@ -36,6 +37,8 @@ import java.util.Set;
 
 @ProducerModule
 abstract class MultibindingProducerModule {
+  static class Foo {}
+
   @Produces
   @IntoSet
   static ListenableFuture<String> futureStr() {
@@ -120,6 +123,13 @@ abstract class MultibindingProducerModule {
   @IntKey(15)
   static String throwingValueFor15() {
     throw new RuntimeException("monkey");
+  }
+
+  @Produces
+  @IntoMap
+  @LazyClassKey(Foo.class)
+  static String produceName() {
+    return "foo";
   }
 
   @Multibinds

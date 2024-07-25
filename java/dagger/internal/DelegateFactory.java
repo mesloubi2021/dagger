@@ -17,12 +17,11 @@
 package dagger.internal;
 
 import static dagger.internal.Preconditions.checkNotNull;
-
-import javax.inject.Provider;
+import static dagger.internal.Providers.asDaggerProvider;
 
 /**
  * A DelegateFactory that is used to stitch Provider/Lazy indirection based dependency cycles.
- * 
+ *
  * @since 2.0.1
  */
 public final class DelegateFactory<T> implements Factory<T> {
@@ -44,18 +43,43 @@ public final class DelegateFactory<T> implements Factory<T> {
   }
 
   /**
+   * Legacy javax version of the method to support libraries compiled with an older version of
+   * Dagger. Do not use directly.
+   */
+  @Deprecated
+  public void setDelegatedProvider(javax.inject.Provider<T> delegate) {
+    setDelegatedProvider(asDaggerProvider(delegate));
+  }
+
+  /**
    * Sets {@code delegateFactory}'s delegate provider to {@code delegate}.
    *
    * <p>{@code delegateFactory} must be an instance of {@link DelegateFactory}, otherwise this
    * method will throw a {@link ClassCastException}.
    */
   public static <T> void setDelegate(Provider<T> delegateFactory, Provider<T> delegate) {
-    checkNotNull(delegate);
     DelegateFactory<T> asDelegateFactory = (DelegateFactory<T>) delegateFactory;
-    if (asDelegateFactory.delegate != null) {
+    setDelegateInternal(asDelegateFactory, delegate);
+  }
+
+  /**
+   * Legacy javax version of the method to support libraries compiled with an older version of
+   * Dagger. Do not use directly.
+   */
+  @Deprecated
+  public static <T> void setDelegate(
+      javax.inject.Provider<T> delegateFactory, javax.inject.Provider<T> delegate) {
+    DelegateFactory<T> asDelegateFactory = (DelegateFactory<T>) delegateFactory;
+    setDelegateInternal(asDelegateFactory, asDaggerProvider(delegate));
+  }
+
+  private static <T> void setDelegateInternal(
+      DelegateFactory<T> delegateFactory, Provider<T> delegate) {
+    checkNotNull(delegate);
+    if (delegateFactory.delegate != null) {
       throw new IllegalStateException();
     }
-    asDelegateFactory.delegate = delegate;
+    delegateFactory.delegate = delegate;
   }
 
   /**
@@ -67,4 +91,3 @@ public final class DelegateFactory<T> implements Factory<T> {
     return checkNotNull(delegate);
   }
 }
-

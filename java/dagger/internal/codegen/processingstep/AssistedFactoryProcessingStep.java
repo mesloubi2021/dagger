@@ -23,6 +23,7 @@ import static dagger.internal.codegen.binding.SourceFiles.generatedClassNameForB
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableList;
 import static dagger.internal.codegen.javapoet.CodeBlocks.toParametersCodeBlock;
 import static dagger.internal.codegen.javapoet.TypeNames.INSTANCE_FACTORY;
+import static dagger.internal.codegen.javapoet.TypeNames.daggerProviderOf;
 import static dagger.internal.codegen.javapoet.TypeNames.providerOf;
 import static dagger.internal.codegen.langmodel.Accessibility.accessibleTypeName;
 import static dagger.internal.codegen.xprocessing.MethodSpecs.overriding;
@@ -56,14 +57,13 @@ import com.squareup.javapoet.ParameterSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
-import dagger.internal.codegen.base.SourceFileGenerationException;
 import dagger.internal.codegen.base.SourceFileGenerator;
+import dagger.internal.codegen.binding.AssistedFactoryBinding;
 import dagger.internal.codegen.binding.AssistedInjectionAnnotations;
 import dagger.internal.codegen.binding.AssistedInjectionAnnotations.AssistedFactoryMetadata;
 import dagger.internal.codegen.binding.AssistedInjectionAnnotations.AssistedParameter;
 import dagger.internal.codegen.binding.BindingFactory;
 import dagger.internal.codegen.binding.MethodSignatureFormatter;
-import dagger.internal.codegen.binding.ProvisionBinding;
 import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.validation.ValidationReport;
 import dagger.internal.codegen.xprocessing.XTypes;
@@ -109,12 +109,8 @@ final class AssistedFactoryProcessingStep extends TypeCheckingProcessingStep<XTy
     ValidationReport report = new AssistedFactoryValidator().validate(factory);
     report.printMessagesTo(messager);
     if (report.isClean()) {
-      try {
-        ProvisionBinding binding = bindingFactory.assistedFactoryBinding(factory, Optional.empty());
-        new AssistedFactoryImplGenerator().generate(binding);
-      } catch (SourceFileGenerationException e) {
-        e.printMessageTo(messager);
-      }
+      new AssistedFactoryImplGenerator()
+          .generate(bindingFactory.assistedFactoryBinding(factory, Optional.empty()));
     }
   }
 
@@ -229,13 +225,14 @@ final class AssistedFactoryProcessingStep extends TypeCheckingProcessingStep<XTy
   }
 
   /** Generates an implementation of the {@link dagger.assisted.AssistedFactory}-annotated class. */
-  private final class AssistedFactoryImplGenerator extends SourceFileGenerator<ProvisionBinding> {
+  private final class AssistedFactoryImplGenerator
+      extends SourceFileGenerator<AssistedFactoryBinding> {
     AssistedFactoryImplGenerator() {
       super(filer, processingEnv);
     }
 
     @Override
-    public XElement originatingElement(ProvisionBinding binding) {
+    public XElement originatingElement(AssistedFactoryBinding binding) {
       return binding.bindingElement().get();
     }
 
@@ -272,7 +269,7 @@ final class AssistedFactoryProcessingStep extends TypeCheckingProcessingStep<XTy
     //   }
     // }
     @Override
-    public ImmutableList<TypeSpec.Builder> topLevelTypes(ProvisionBinding binding) {
+    public ImmutableList<TypeSpec.Builder> topLevelTypes(AssistedFactoryBinding binding) {
       XTypeElement factory = asTypeElement(binding.bindingElement().get());
 
       ClassName name = generatedClassNameForBinding(binding);
@@ -314,12 +311,37 @@ final class AssistedFactoryProcessingStep extends TypeCheckingProcessingStep<XTy
                           .map(param -> CodeBlock.of("$L", param.getJvmName()))
                           .collect(toParametersCodeBlock()))
                   .build())
+          // In a future release, we should delete this javax method. This will still be a breaking
+          // change, but keeping compatibility for a while should reduce the likelihood of breakages
+          // as it would require components built at much older versions using factories built at
+          // newer versions to break.
           .addMethod(
               MethodSpec.methodBuilder("create")
                   .addModifiers(PUBLIC, STATIC)
                   .addParameter(delegateFactoryParam)
                   .addTypeVariables(typeVariableNames(metadata.assistedInjectElement()))
                   .returns(providerOf(factory.getType().getTypeName()))
+                  .addStatement(
+                      "return $T.$Lcreate(new $T($N))",
+                      INSTANCE_FACTORY,
+                      // Java 7 type inference requires the method call provide the exact type here.
+                      isPreJava8SourceVersion(processingEnv)
+                          ? CodeBlock.of(
+                              "<$T>",
+                              accessibleTypeName(metadata.factoryType(), name, processingEnv))
+                          : CodeBlock.of(""),
+                      name,
+                      delegateFactoryParam)
+                  .build())
+          // Normally we would have called this just "create", but because of backwards
+          // compatibility we can't have two methods with the same name/arguments returning
+          // different Provider types.
+          .addMethod(
+              MethodSpec.methodBuilder("createFactoryProvider")
+                  .addModifiers(PUBLIC, STATIC)
+                  .addParameter(delegateFactoryParam)
+                  .addTypeVariables(typeVariableNames(metadata.assistedInjectElement()))
+                  .returns(daggerProviderOf(factory.getType().getTypeName()))
                   .addStatement(
                       "return $T.$Lcreate(new $T($N))",
                       INSTANCE_FACTORY,
@@ -341,7 +363,7 @@ final class AssistedFactoryProcessingStep extends TypeCheckingProcessingStep<XTy
       // e.g. an @AssistedInject Foo(...) {...} constructor will generate a Foo_Factory class.
       ClassName generatedFactoryClassName =
           generatedClassNameForBinding(
-              bindingFactory.injectionBinding(
+              bindingFactory.assistedInjectionBinding(
                   getOnlyElement(assistedInjectedConstructors(assistedInjectType.getTypeElement())),
                   Optional.empty()));
 

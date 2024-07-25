@@ -26,11 +26,11 @@ import androidx.room.compiler.processing.XTypeElement;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.graph.ImmutableNetwork;
 import com.google.common.graph.MutableNetwork;
 import com.google.common.graph.NetworkBuilder;
 import dagger.internal.codegen.binding.BindingGraph.TopLevelBindingGraph;
+import dagger.internal.codegen.binding.BindingGraphFactory.LegacyBindingGraph;
 import dagger.internal.codegen.binding.ComponentDescriptor.ComponentMethodDescriptor;
 import dagger.internal.codegen.model.BindingGraph.ComponentNode;
 import dagger.internal.codegen.model.BindingGraph.DependencyEdge;
@@ -43,27 +43,22 @@ import dagger.internal.codegen.model.DependencyRequest;
 import dagger.internal.codegen.model.Key;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
 
 /** Converts {@link BindingGraph}s to {@link dagger.internal.codegen.model.BindingGraph}s. */
 final class BindingGraphConverter {
-  private final BindingDeclarationFormatter bindingDeclarationFormatter;
 
   @Inject
-  BindingGraphConverter(BindingDeclarationFormatter bindingDeclarationFormatter) {
-    this.bindingDeclarationFormatter = bindingDeclarationFormatter;
-  }
+  BindingGraphConverter() {}
 
   /**
    * Creates the external {@link dagger.internal.codegen.model.BindingGraph} representing the given
    * internal {@link BindingGraph}.
    */
   BindingGraph convert(LegacyBindingGraph legacyBindingGraph, boolean isFullBindingGraph) {
-    MutableNetwork<Node, Edge> network = asNetwork(legacyBindingGraph);
+    MutableNetwork<Node, Edge> network = Converter.convertToNetwork(legacyBindingGraph);
     ComponentNode rootNode = legacyBindingGraph.componentNode();
 
     // When bindings are copied down into child graphs because they transitively depend on local
@@ -80,22 +75,19 @@ final class BindingGraphConverter {
     return BindingGraph.create(rootNode, topLevelBindingGraph);
   }
 
-  private MutableNetwork<Node, Edge> asNetwork(LegacyBindingGraph graph) {
-    Converter converter = new Converter();
-    converter.visitRootComponent(graph);
-    return converter.network;
-  }
+  private static final class Converter {
+    static MutableNetwork<Node, Edge> convertToNetwork(LegacyBindingGraph graph) {
+      Converter converter = new Converter();
+      converter.visitRootComponent(graph);
+      return converter.network;
+    }
 
-  private final class Converter {
     /** The path from the root graph to the currently visited graph. */
     private final Deque<LegacyBindingGraph> bindingGraphPath = new ArrayDeque<>();
 
     private final MutableNetwork<Node, Edge> network =
         NetworkBuilder.directed().allowsParallelEdges(true).allowsSelfLoops(true).build();
     private final Set<BindingNode> bindings = new HashSet<>();
-
-    private final Map<ResolvedBindings, ImmutableSet<BindingNode>> resolvedBindingsMap =
-        new HashMap<>();
 
     private void visitRootComponent(LegacyBindingGraph graph) {
       visitComponent(graph);
@@ -127,7 +119,7 @@ final class BindingGraphConverter {
       }
 
       for (ResolvedBindings resolvedBindings : graph.resolvedBindings()) {
-        for (BindingNode binding : bindingNodes(resolvedBindings)) {
+        for (BindingNode binding : resolvedBindings.bindingNodes()) {
           if (bindings.add(binding)) {
             network.addNode(binding);
             for (DependencyRequest dependencyRequest : binding.dependencies()) {
@@ -139,8 +131,7 @@ final class BindingGraphConverter {
             network.addEdge(
                 binding,
                 subcomponentNode(binding.key().type().xprocessing(), graph),
-                new SubcomponentCreatorBindingEdgeImpl(
-                    resolvedBindings.subcomponentDeclarations()));
+                new SubcomponentCreatorBindingEdgeImpl(binding.subcomponentDeclarations()));
           }
         }
       }
@@ -170,21 +161,6 @@ final class BindingGraphConverter {
     }
 
     /**
-     * Returns the subpath from the root component to the matching {@code ancestor} of the current
-     * component.
-     */
-    private ComponentPath pathFromRootToAncestor(XTypeElement ancestor) {
-      for (LegacyBindingGraph graph : bindingGraphPath) {
-        if (graph.componentDescriptor().typeElement().equals(ancestor)) {
-          return graph.componentPath();
-        }
-      }
-      throw new IllegalArgumentException(
-          String.format(
-              "%s is not in the current path: %s", ancestor.getQualifiedName(), componentPath()));
-    }
-
-    /**
      * Returns the LegacyBindingGraph for {@code ancestor}, where {@code ancestor} is in the
      * component path of the current traversal.
      */
@@ -208,7 +184,7 @@ final class BindingGraphConverter {
       if (dependencies.isEmpty()) {
         addDependencyEdge(source, dependencyRequest, missingBindingNode(dependencies));
       } else {
-        for (BindingNode dependency : bindingNodes(dependencies)) {
+        for (BindingNode dependency : dependencies.bindingNodes()) {
           addDependencyEdge(source, dependencyRequest, dependency);
         }
       }
@@ -246,35 +222,6 @@ final class BindingGraphConverter {
         Node source, DependencyRequest dependencyRequest) {
       return graphForAncestor(source.componentPath().currentComponent().xprocessing())
           .resolvedBindings(bindingRequest(dependencyRequest));
-    }
-
-    private ImmutableSet<BindingNode> bindingNodes(ResolvedBindings resolvedBindings) {
-      return resolvedBindingsMap.computeIfAbsent(resolvedBindings, this::uncachedBindingNodes);
-    }
-
-    private ImmutableSet<BindingNode> uncachedBindingNodes(ResolvedBindings resolvedBindings) {
-      ImmutableSet.Builder<BindingNode> bindingNodes = ImmutableSet.builder();
-      resolvedBindings
-          .allBindings()
-          .asMap()
-          .forEach(
-              (component, bindings) -> {
-                for (Binding binding : bindings) {
-                  bindingNodes.add(bindingNode(resolvedBindings, binding, component));
-                }
-              });
-      return bindingNodes.build();
-    }
-
-    private BindingNode bindingNode(
-        ResolvedBindings resolvedBindings, Binding binding, XTypeElement owningComponent) {
-      return BindingNode.create(
-          pathFromRootToAncestor(owningComponent),
-          binding,
-          resolvedBindings.multibindingDeclarations(),
-          resolvedBindings.optionalBindingDeclarations(),
-          resolvedBindings.subcomponentDeclarations(),
-          bindingDeclarationFormatter);
     }
 
     private MissingBinding missingBindingNode(ResolvedBindings dependencies) {

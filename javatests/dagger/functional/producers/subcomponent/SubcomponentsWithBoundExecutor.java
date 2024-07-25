@@ -25,6 +25,8 @@ import dagger.producers.Produces;
 import dagger.producers.Production;
 import dagger.producers.ProductionComponent;
 import dagger.producers.ProductionSubcomponent;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.inject.Inject;
@@ -32,12 +34,15 @@ import javax.inject.Provider;
 import javax.inject.Qualifier;
 
 final class SubcomponentsWithBoundExecutor {
+  @Retention(RetentionPolicy.RUNTIME)  // Technically a JSR330 requirement
   @Qualifier
   @interface FromParent {}
 
+  @Retention(RetentionPolicy.RUNTIME)  // Technically a JSR330 requirement
   @Qualifier
   @interface FromChild {}
 
+  @Retention(RetentionPolicy.RUNTIME)  // Technically a JSR330 requirement
   @Qualifier
   @interface FromGrandchild {}
 

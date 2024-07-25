@@ -19,11 +19,6 @@ package dagger.internal.codegen.model;
 import static com.google.common.base.CaseFormat.UPPER_CAMEL;
 import static com.google.common.base.CaseFormat.UPPER_UNDERSCORE;
 
-import dagger.Lazy;
-import dagger.producers.Produced;
-import dagger.producers.Producer;
-import javax.inject.Provider;
-
 /**
  * Represents the different kinds of {@link javax.lang.model.type.TypeMirror types} that may be
  * requested as dependencies for the same key. For example, {@code String}, {@code
@@ -35,13 +30,13 @@ public enum RequestKind {
   /** A default request for an instance. E.g.: {@code FooType} */
   INSTANCE,
 
-  /** A request for a {@link Provider}. E.g.: {@code Provider<FooType>} */
+  /** A request for a {@code Provider}. E.g.: {@code Provider<FooType>} */
   PROVIDER,
 
-  /** A request for a {@link Lazy}. E.g.: {@code Lazy<FooType>} */
+  /** A request for a {@code Lazy}. E.g.: {@code Lazy<FooType>} */
   LAZY,
 
-  /** A request for a {@link Provider} of a {@link Lazy}. E.g.: {@code Provider<Lazy<FooType>>} */
+  /** A request for a {@code Provider} of a {@code Lazy}. E.g.: {@code Provider<Lazy<FooType>>}. */
   PROVIDER_OF_LAZY,
 
   /**
@@ -50,10 +45,10 @@ public enum RequestKind {
    */
   MEMBERS_INJECTION,
 
-  /** A request for a {@link Producer}. E.g.: {@code Producer<FooType>} */
+  /** A request for a {@code Producer}. E.g.: {@code Producer<FooType>} */
   PRODUCER,
 
-  /** A request for a {@link Produced}. E.g.: {@code Produced<FooType>} */
+  /** A request for a {@code Produced}. E.g.: {@code Produced<FooType>} */
   PRODUCED,
 
   /**

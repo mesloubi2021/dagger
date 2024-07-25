@@ -2,10 +2,10 @@ package test;
 
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Preconditions;
+import dagger.internal.Provider;
 import dagger.internal.SetFactory;
 import java.util.Set;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -16,7 +16,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -72,7 +74,7 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<Object> dependsOnMultibinding() {
+    public javax.inject.Provider<Object> dependsOnMultibinding() {
       return reliesOnMultibindingProvider;
     }
   }
@@ -99,7 +101,7 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<Object> dependsOnMultibinding() {
+    public javax.inject.Provider<Object> dependsOnMultibinding() {
       return reliesOnMultibindingProvider;
     }
 

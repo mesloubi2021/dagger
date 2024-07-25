@@ -34,6 +34,18 @@ android_local_test(
     ],
 )
 
+android_library(
+    name = "PackagePrivateConstructorTestClasses",
+    srcs = ["PackagePrivateConstructorTestClasses.java"],
+    deps = [
+        "@maven//:androidx_activity_activity",
+        "@maven//:androidx_fragment_fragment",
+        "@maven//:androidx_lifecycle_lifecycle_common",
+        "@maven//:androidx_lifecycle_lifecycle_viewmodel",
+        "@maven//:androidx_lifecycle_lifecycle_viewmodel_savedstate",
+    ],
+)
+
 exports_files(srcs = [
     "UsesLocalComponentTestBindingsTest.java",
     "UsesSharedComponent1Test.java",

@@ -25,7 +25,7 @@ import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.Binding;
 import dagger.internal.codegen.binding.BindingGraph;
-import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.model.BindingKind;
 import dagger.internal.codegen.writing.ComponentImplementation.ShardImplementation;
 import dagger.internal.codegen.writing.FrameworkFieldInitializer.FrameworkInstanceCreationExpression;
@@ -39,7 +39,7 @@ final class SwitchingProviderInstanceSupplier implements FrameworkInstanceSuppli
 
   @AssistedInject
   SwitchingProviderInstanceSupplier(
-      @Assisted ProvisionBinding binding,
+      @Assisted ContributionBinding binding,
       BindingGraph graph,
       ComponentImplementation componentImplementation,
       UnscopedDirectInstanceRequestRepresentationFactory
@@ -80,6 +80,6 @@ final class SwitchingProviderInstanceSupplier implements FrameworkInstanceSuppli
 
   @AssistedFactory
   static interface Factory {
-    SwitchingProviderInstanceSupplier create(ProvisionBinding binding);
+    SwitchingProviderInstanceSupplier create(ContributionBinding binding);
   }
 }

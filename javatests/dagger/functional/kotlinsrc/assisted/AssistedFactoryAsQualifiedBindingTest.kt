@@ -17,7 +17,6 @@
 package dagger.functional.kotlinsrc.assisted
 
 import com.google.common.truth.Truth.assertThat
-import com.google.common.truth.Truth8.assertThat
 import dagger.Binds
 import dagger.BindsInstance
 import dagger.BindsOptionalOf
@@ -56,7 +55,7 @@ internal class AssistedFactoryAsQualifiedBindingTest {
     interface Factory {
       fun create(
         @BindsInstance @AsComponentDependency bar: Bar,
-        @BindsInstance @AsComponentDependency barFactory: BarFactory
+        @BindsInstance @AsComponentDependency barFactory: BarFactory,
       ): TestComponent
     }
   }
@@ -132,7 +131,7 @@ internal class AssistedFactoryAsQualifiedBindingTest {
     @AsMultibinding val barSet: Set<Bar>,
     @AsMultibinding val barFactorySet: Set<@JvmSuppressWildcards BarFactory>,
     val unqualifiedBarSet: Set<Bar>,
-    val unqualifiedBarFactorySet: Set<@JvmSuppressWildcards BarFactory>
+    val unqualifiedBarFactorySet: Set<@JvmSuppressWildcards BarFactory>,
   )
 
   class Bar @AssistedInject constructor()

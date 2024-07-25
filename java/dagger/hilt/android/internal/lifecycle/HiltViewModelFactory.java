@@ -35,7 +35,6 @@ import dagger.hilt.android.components.ViewModelComponent;
 import dagger.hilt.android.internal.builders.ViewModelComponentBuilder;
 import dagger.multibindings.Multibinds;
 import java.util.Map;
-import java.util.Set;
 import javax.inject.Provider;
 import kotlin.jvm.functions.Function1;
 
@@ -55,11 +54,11 @@ public final class HiltViewModelFactory implements ViewModelProvider.Factory {
   @InstallIn(ViewModelComponent.class)
   public interface ViewModelFactoriesEntryPoint {
     @HiltViewModelMap
-    Map<String, Provider<ViewModel>> getHiltViewModelMap();
+    Map<Class<?>, Provider<ViewModel>> getHiltViewModelMap();
 
     // From ViewModel class names to user defined @AssistedFactory-annotated implementations.
     @HiltViewModelAssistedMap
-    Map<String, Object> getHiltViewModelAssistedMap();
+    Map<Class<?>, Object> getHiltViewModelAssistedMap();
   }
 
   /** Creation extra key for the callbacks that create @AssistedInject-annotated ViewModels. */
@@ -72,19 +71,19 @@ public final class HiltViewModelFactory implements ViewModelProvider.Factory {
   interface ViewModelModule {
     @Multibinds
     @HiltViewModelMap
-    Map<String, ViewModel> hiltViewModelMap();
+    Map<Class<?>, ViewModel> hiltViewModelMap();
 
     @Multibinds
     @HiltViewModelAssistedMap
-    Map<String, Object> hiltViewModelAssistedMap();
+    Map<Class<?>, Object> hiltViewModelAssistedMap();
   }
 
-  private final Set<String> hiltViewModelKeys;
+  private final Map<Class<?>, Boolean> hiltViewModelKeys;
   private final ViewModelProvider.Factory delegateFactory;
   private final ViewModelProvider.Factory hiltViewModelFactory;
 
   public HiltViewModelFactory(
-      @NonNull Set<String> hiltViewModelKeys,
+      @NonNull Map<Class<?>, Boolean> hiltViewModelKeys,
       @NonNull ViewModelProvider.Factory delegateFactory,
       @NonNull ViewModelComponentBuilder viewModelComponentBuilder) {
     this.hiltViewModelKeys = hiltViewModelKeys;
@@ -113,12 +112,12 @@ public final class HiltViewModelFactory implements ViewModelProvider.Factory {
             Provider<? extends ViewModel> provider =
                 EntryPoints.get(component, ViewModelFactoriesEntryPoint.class)
                     .getHiltViewModelMap()
-                    .get(modelClass.getName());
+                    .get(modelClass);
             Function1<Object, ViewModel> creationCallback = extras.get(CREATION_CALLBACK_KEY);
             Object assistedFactory =
                 EntryPoints.get(component, ViewModelFactoriesEntryPoint.class)
                     .getHiltViewModelAssistedMap()
-                    .get(modelClass.getName());
+                    .get(modelClass);
 
             if (assistedFactory == null) {
               if (creationCallback == null) {
@@ -167,7 +166,7 @@ public final class HiltViewModelFactory implements ViewModelProvider.Factory {
   @Override
   public <T extends ViewModel> T create(
       @NonNull Class<T> modelClass, @NonNull CreationExtras extras) {
-    if (hiltViewModelKeys.contains(modelClass.getName())) {
+    if (hiltViewModelKeys.containsKey(modelClass)) {
       return hiltViewModelFactory.create(modelClass, extras);
     } else {
       return delegateFactory.create(modelClass, extras);
@@ -177,7 +176,7 @@ public final class HiltViewModelFactory implements ViewModelProvider.Factory {
   @NonNull
   @Override
   public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
-    if (hiltViewModelKeys.contains(modelClass.getName())) {
+    if (hiltViewModelKeys.containsKey(modelClass)) {
       return hiltViewModelFactory.create(modelClass);
     } else {
       return delegateFactory.create(modelClass);
@@ -188,7 +187,8 @@ public final class HiltViewModelFactory implements ViewModelProvider.Factory {
   @InstallIn(ActivityComponent.class)
   interface ActivityCreatorEntryPoint {
     @HiltViewModelMap.KeySet
-    Set<String> getViewModelKeys();
+    Map<Class<?>, Boolean> getViewModelKeys();
+
     ViewModelComponentBuilder getViewModelComponentBuilder();
   }
 

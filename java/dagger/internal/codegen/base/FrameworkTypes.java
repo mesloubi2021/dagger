@@ -29,6 +29,7 @@ import java.util.Set;
  * type that the framework itself defines.
  */
 public final class FrameworkTypes {
+  // TODO(erichang): Add the Jakarta Provider here
   private static final ImmutableSet<ClassName> PROVISION_TYPES =
       ImmutableSet.of(TypeNames.PROVIDER, TypeNames.LAZY, TypeNames.MEMBERS_INJECTOR);
 

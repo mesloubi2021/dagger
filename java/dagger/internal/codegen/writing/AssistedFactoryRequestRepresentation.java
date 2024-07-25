@@ -18,7 +18,6 @@ package dagger.internal.codegen.writing;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.collect.Iterables.getOnlyElement;
 import static dagger.internal.codegen.binding.AssistedInjectionAnnotations.assistedFactoryMethod;
 import static dagger.internal.codegen.writing.AssistedInjectionParameters.assistedFactoryParameterSpecs;
 import static dagger.internal.codegen.xprocessing.MethodSpecs.overriding;
@@ -34,11 +33,11 @@ import com.squareup.javapoet.TypeSpec;
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
+import dagger.internal.codegen.binding.AssistedFactoryBinding;
+import dagger.internal.codegen.binding.AssistedInjectionBinding;
 import dagger.internal.codegen.binding.Binding;
 import dagger.internal.codegen.binding.BindingGraph;
-import dagger.internal.codegen.binding.ProvisionBinding;
 import dagger.internal.codegen.javapoet.Expression;
-import dagger.internal.codegen.model.DependencyRequest;
 import java.util.Optional;
 
 /**
@@ -46,14 +45,14 @@ import java.util.Optional;
  * dagger.assisted.AssistedFactory} methods.
  */
 final class AssistedFactoryRequestRepresentation extends RequestRepresentation {
-  private final ProvisionBinding binding;
+  private final AssistedFactoryBinding binding;
   private final BindingGraph graph;
   private final SimpleMethodRequestRepresentation.Factory simpleMethodRequestRepresentationFactory;
   private final ComponentImplementation componentImplementation;
 
   @AssistedInject
   AssistedFactoryRequestRepresentation(
-      @Assisted ProvisionBinding binding,
+      @Assisted AssistedFactoryBinding binding,
       BindingGraph graph,
       ComponentImplementation componentImplementation,
       SimpleMethodRequestRepresentation.Factory simpleMethodRequestRepresentationFactory) {
@@ -65,16 +64,14 @@ final class AssistedFactoryRequestRepresentation extends RequestRepresentation {
 
   @Override
   Expression getDependencyExpression(ClassName requestingClass) {
-    // An assisted factory binding should have a single request for an assisted injection type.
-    DependencyRequest assistedInjectionRequest = getOnlyElement(binding.provisionDependencies());
     // Get corresponding assisted injection binding.
-    Optional<Binding> localBinding = graph.localContributionBinding(assistedInjectionRequest.key());
+    Optional<Binding> localBinding = graph.localContributionBinding(binding.assistedInjectKey());
     checkArgument(
         localBinding.isPresent(),
         "assisted factory should have a dependency on an assisted injection binding");
     Expression assistedInjectionExpression =
         simpleMethodRequestRepresentationFactory
-            .create((ProvisionBinding) localBinding.get())
+            .create((AssistedInjectionBinding) localBinding.get())
             .getDependencyExpression(requestingClass.peerClass(""));
     return Expression.create(
         assistedInjectionExpression.type(),
@@ -116,6 +113,6 @@ final class AssistedFactoryRequestRepresentation extends RequestRepresentation {
 
   @AssistedFactory
   static interface Factory {
-    AssistedFactoryRequestRepresentation create(ProvisionBinding binding);
+    AssistedFactoryRequestRepresentation create(AssistedFactoryBinding binding);
   }
 }

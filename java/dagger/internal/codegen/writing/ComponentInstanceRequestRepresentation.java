@@ -21,17 +21,17 @@ import com.squareup.javapoet.CodeBlock;
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
-import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.binding.ComponentBinding;
 import dagger.internal.codegen.javapoet.Expression;
 
 /** A binding expression for the instance of the component itself, i.e. {@code this}. */
 final class ComponentInstanceRequestRepresentation extends RequestRepresentation {
   private final ComponentImplementation componentImplementation;
-  private final ContributionBinding binding;
+  private final ComponentBinding binding;
 
   @AssistedInject
   ComponentInstanceRequestRepresentation(
-      @Assisted ContributionBinding binding, ComponentImplementation componentImplementation) {
+      @Assisted ComponentBinding binding, ComponentImplementation componentImplementation) {
     this.componentImplementation = componentImplementation;
     this.binding = binding;
   }
@@ -47,6 +47,6 @@ final class ComponentInstanceRequestRepresentation extends RequestRepresentation
 
   @AssistedFactory
   static interface Factory {
-    ComponentInstanceRequestRepresentation create(ContributionBinding binding);
+    ComponentInstanceRequestRepresentation create(ComponentBinding binding);
   }
 }

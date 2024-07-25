@@ -23,8 +23,8 @@ import dagger.MembersInjector
 import dagger.functional.kotlinsrc.membersinject.subpackage.a.AGrandchild
 import dagger.functional.kotlinsrc.membersinject.subpackage.a.AParent
 import dagger.functional.kotlinsrc.membersinject.subpackage.b.BChild
+import dagger.internal.Provider
 import javax.inject.Inject
-import javax.inject.Provider
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -85,7 +85,9 @@ class MembersInjectTest {
   }
 
   class A : B() // No injected members
+
   open class B : C() // No injected members
+
   open class C {
     @Inject lateinit var value: String
   }

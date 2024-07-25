@@ -60,6 +60,14 @@ public interface BindingGraphPlugin {
   }
 
   /**
+   * Runs before each round of Dagger annotation processing.
+   *
+   * <p>If using the plugin to process elements that need resetting at the beginning of each
+   * processing round, use this function to perform the setup.
+   */
+  default void onProcessingRoundBegin() {}
+
+  /**
    * Perform any extra work after the plugin finished all its visiting. This will be called once per
    * instance of this plugin, after all graphs were {@linkplain #visitGraph(BindingGraph,
    * DiagnosticReporter) visited}

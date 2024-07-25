@@ -17,15 +17,16 @@
 package dagger.producers.internal;
 
 import static dagger.internal.Preconditions.checkNotNull;
+import static dagger.internal.Providers.asDaggerProvider;
 
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import dagger.internal.Provider;
 import dagger.producers.monitoring.ProducerMonitor;
 import dagger.producers.monitoring.ProducerToken;
 import dagger.producers.monitoring.ProductionComponentMonitor;
 import java.util.concurrent.Executor;
-import javax.inject.Provider;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
 /**
@@ -52,6 +53,18 @@ public abstract class AbstractProducesMethodProducer<D, T> extends AbstractProdu
     this.monitorProvider = checkNotNull(monitorProvider);
     this.token = token;
     this.executorProvider = checkNotNull(executorProvider);
+  }
+
+  /**
+   * Legacy javax version of the method to support libraries compiled with an older version of
+   * Dagger. Do not use directly.
+   */
+  @Deprecated
+  protected AbstractProducesMethodProducer(
+      javax.inject.Provider<ProductionComponentMonitor> monitorProvider,
+      @NullableDecl ProducerToken token,
+      javax.inject.Provider<Executor> executorProvider) {
+    this(asDaggerProvider(monitorProvider), token, asDaggerProvider(executorProvider));
   }
 
   @Override

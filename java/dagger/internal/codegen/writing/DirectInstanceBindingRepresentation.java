@@ -25,7 +25,7 @@ import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.BindingGraph;
 import dagger.internal.codegen.binding.BindingRequest;
 import dagger.internal.codegen.binding.ComponentDescriptor.ComponentMethodDescriptor;
-import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.model.RequestKind;
 import dagger.internal.codegen.writing.ComponentImplementation.ShardImplementation;
 import java.util.HashMap;
@@ -34,7 +34,7 @@ import java.util.Optional;
 
 /** Returns request representation based on a direct instance expression. */
 final class DirectInstanceBindingRepresentation {
-  private final ProvisionBinding binding;
+  private final ContributionBinding binding;
   private final BindingGraph graph;
   private final ComponentImplementation componentImplementation;
   private final ComponentMethodRequestRepresentation.Factory
@@ -49,7 +49,7 @@ final class DirectInstanceBindingRepresentation {
 
   @AssistedInject
   DirectInstanceBindingRepresentation(
-      @Assisted ProvisionBinding binding,
+      @Assisted ContributionBinding binding,
       BindingGraph graph,
       ComponentImplementation componentImplementation,
       ComponentMethodRequestRepresentation.Factory componentMethodRequestRepresentationFactory,
@@ -133,7 +133,7 @@ final class DirectInstanceBindingRepresentation {
     }
   }
 
-  private static boolean requiresMethodEncapsulation(ProvisionBinding binding) {
+  private static boolean requiresMethodEncapsulation(ContributionBinding binding) {
     switch (binding.kind()) {
       case COMPONENT:
       case COMPONENT_PROVISION:
@@ -165,6 +165,6 @@ final class DirectInstanceBindingRepresentation {
 
   @AssistedFactory
   static interface Factory {
-    DirectInstanceBindingRepresentation create(ProvisionBinding binding);
+    DirectInstanceBindingRepresentation create(ContributionBinding binding);
   }
 }

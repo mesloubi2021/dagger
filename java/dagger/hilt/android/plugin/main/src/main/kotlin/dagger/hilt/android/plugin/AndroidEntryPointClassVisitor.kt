@@ -36,15 +36,10 @@ import org.objectweb.asm.Opcodes
 class AndroidEntryPointClassVisitor(
   private val apiVersion: Int,
   nextClassVisitor: ClassVisitor,
-  private val additionalClasses: File
+  private val classContext: ClassContext
 ) : ClassVisitor(apiVersion, nextClassVisitor) {
 
-  interface AndroidEntryPointParams : InstrumentationParameters {
-    @get:Internal
-    val additionalClassesDir: Property<File>
-  }
-
-  abstract class Factory : AsmClassVisitorFactory<AndroidEntryPointParams> {
+  abstract class Factory : AsmClassVisitorFactory<InstrumentationParameters.None> {
     override fun createClassVisitor(
       classContext: ClassContext,
       nextClassVisitor: ClassVisitor
@@ -52,7 +47,7 @@ class AndroidEntryPointClassVisitor(
       return AndroidEntryPointClassVisitor(
         apiVersion = instrumentationContext.apiVersion.get(),
         nextClassVisitor = nextClassVisitor,
-        additionalClasses = parameters.get().additionalClassesDir.get()
+        classContext = classContext
       )
     }
 
@@ -198,34 +193,21 @@ class AndroidEntryPointClassVisitor(
   }
 
   /**
-   * Check if Hilt generated class is a BroadcastReceiver with the marker field which means
+   * Check if Hilt generated class is a BroadcastReceiver with the marker annotation which means
    * a super.onReceive invocation has to be inserted in the implementation.
    */
-  private fun hasOnReceiveBytecodeInjectionMarker() =
-    findAdditionalClassFile(newSuperclassName).inputStream().use {
-      var hasMarker = false
-      ClassReader(it).accept(
-        object : ClassVisitor(apiVersion) {
-          override fun visitField(
-            access: Int,
-            name: String,
-            descriptor: String,
-            signature: String?,
-            value: Any?
-          ): FieldVisitor? {
-            if (name == "onReceiveBytecodeInjectionMarker") {
-              hasMarker = true
-            }
-            return null
-          }
-        },
-        ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES
-      )
-      return@use hasMarker
-    }
+  private fun hasOnReceiveBytecodeInjectionMarker(): Boolean {
+    val newSuperclassFQName = newSuperclassName.toFQName()
+    return classContext.loadClassData(newSuperclassFQName)
+      ?.classAnnotations?.contains(ON_RECEIVE_MARKER_ANNOTATION)
+      ?: error("Cannot load class $newSuperclassFQName!")
+  }
 
-  private fun findAdditionalClassFile(className: String) =
-    File(additionalClasses, "$className.class")
+  /**
+   * Return a fully qualified name from an internal name.
+   * See https://asm.ow2.io/javadoc/org/objectweb/asm/Type.html#getInternalName()
+   */
+  private fun String.toFQName() = this.replace('/', '.')
 
   companion object {
     val ANDROID_ENTRY_POINT_ANNOTATIONS = setOf(
@@ -235,5 +217,6 @@ class AndroidEntryPointClassVisitor(
     const val ON_RECEIVE_METHOD_NAME = "onReceive"
     const val ON_RECEIVE_METHOD_DESCRIPTOR =
       "(Landroid/content/Context;Landroid/content/Intent;)V"
+    const val ON_RECEIVE_MARKER_ANNOTATION = "dagger.hilt.android.internal.OnReceiveBytecodeInjectionMarker"
   }
 }

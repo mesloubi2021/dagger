@@ -41,6 +41,7 @@ import dagger.internal.codegen.base.ComponentCreatorAnnotation;
 import dagger.internal.codegen.base.ComponentCreatorKind;
 import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.model.DependencyRequest;
+import dagger.internal.codegen.xprocessing.XElements;
 import java.util.List;
 
 /**
@@ -161,7 +162,12 @@ public abstract class ComponentCreatorDescriptor {
     for (XMethodElement method : getAllUnimplementedMethods(creator)) {
       XMethodType resolvedMethodType = method.asMemberOf(creator.getType());
       if (isSubtype(componentType, resolvedMethodType.getReturnType())) {
-        verify(factoryMethod == null); // validation should have ensured there's only 1.
+        verify(
+            factoryMethod == null,
+            "Expected a single factory method for %s but found multiple: [%s, %s]",
+            XElements.toStableString(creator),
+            XElements.toStableString(factoryMethod),
+            XElements.toStableString(method));
         factoryMethod = method;
       } else {
         XExecutableParameterElement parameter = getOnlyElement(method.getParameters());
@@ -171,7 +177,10 @@ public abstract class ComponentCreatorDescriptor {
             method);
       }
     }
-    verify(factoryMethod != null); // validation should have ensured this.
+    verify(
+        factoryMethod != null,
+        "Expected a single factory method for %s but found none.",
+        XElements.toStableString(creator));
 
     ImmutableSetMultimap.Builder<ComponentRequirement, XExecutableParameterElement>
         factoryParameters = ImmutableSetMultimap.builder();

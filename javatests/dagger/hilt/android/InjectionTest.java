@@ -19,7 +19,6 @@ package dagger.hilt.android;
 import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
 import static com.google.common.truth.Truth.assertThat;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
 import android.annotation.TargetApi;
@@ -436,21 +435,6 @@ public final class InjectionTest {
             fragment.getContext(), /* attrs= */ null, /* defStyleAttr= */ 0, /* defStyleRes= */ 0);
     assertThat(view.appBinding).isEqualTo(APP_BINDING);
     assertThat(view.activityBinding).isEqualTo(ACTIVITY_BINDING);
-  }
-
-  @Test
-  @Config(sdk = 19)
-  public void testViewNoFragmentBindingsWithFragment_fourthConstructor_notPresentOnTwenty() {
-    TestFragment fragment = setupFragment(TestActivity.class, new TestFragment());
-
-    assertThrows(
-        NoSuchMethodError.class,
-        () ->
-            new TestView(
-                fragment.getContext(),
-                /* attrs= */ null,
-                /* defStyleAttr= */ 0,
-                /* defStyleRes= */ 0));
   }
 
   @Test

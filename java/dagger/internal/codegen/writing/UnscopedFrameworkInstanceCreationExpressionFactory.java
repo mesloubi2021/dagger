@@ -17,9 +17,18 @@
 package dagger.internal.codegen.writing;
 
 import com.squareup.javapoet.CodeBlock;
+import dagger.internal.codegen.binding.BoundInstanceBinding;
+import dagger.internal.codegen.binding.ComponentDependencyBinding;
+import dagger.internal.codegen.binding.ComponentDependencyProductionBinding;
+import dagger.internal.codegen.binding.ComponentDependencyProvisionBinding;
 import dagger.internal.codegen.binding.ComponentRequirement;
 import dagger.internal.codegen.binding.ContributionBinding;
-import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.binding.DelegateBinding;
+import dagger.internal.codegen.binding.MembersInjectorBinding;
+import dagger.internal.codegen.binding.MultiboundMapBinding;
+import dagger.internal.codegen.binding.MultiboundSetBinding;
+import dagger.internal.codegen.binding.OptionalBinding;
+import dagger.internal.codegen.binding.ProductionBinding;
 import dagger.internal.codegen.writing.FrameworkFieldInitializer.FrameworkInstanceCreationExpression;
 import javax.inject.Inject;
 
@@ -109,14 +118,17 @@ final class UnscopedFrameworkInstanceCreationExpressionFactory {
 
       case BOUND_INSTANCE:
         return instanceFactoryCreationExpression(
-            binding, ComponentRequirement.forBoundInstance(binding));
+            binding,
+            ComponentRequirement.forBoundInstance((BoundInstanceBinding) binding));
 
       case COMPONENT_DEPENDENCY:
         return instanceFactoryCreationExpression(
-            binding, ComponentRequirement.forDependency(binding.key().type().xprocessing()));
+            binding,
+            ComponentRequirement.forDependency((ComponentDependencyBinding) binding));
 
       case COMPONENT_PROVISION:
-        return dependencyMethodProviderCreationExpressionFactory.create((ProvisionBinding) binding);
+        return dependencyMethodProviderCreationExpressionFactory.create(
+            (ComponentDependencyProvisionBinding) binding);
 
       case SUBCOMPONENT_CREATOR:
         return anonymousProviderCreationExpressionFactory.create(binding);
@@ -128,25 +140,28 @@ final class UnscopedFrameworkInstanceCreationExpressionFactory {
         return injectionOrProvisionProviderCreationExpressionFactory.create(binding);
 
       case COMPONENT_PRODUCTION:
-        return dependencyMethodProducerCreationExpressionFactory.create(binding);
+        return dependencyMethodProducerCreationExpressionFactory.create(
+            (ComponentDependencyProductionBinding) binding);
 
       case PRODUCTION:
-        return producerCreationExpressionFactory.create(binding);
+        return producerCreationExpressionFactory.create((ProductionBinding) binding);
 
       case MULTIBOUND_SET:
-        return setFactoryCreationExpressionFactory.create(binding);
+        return setFactoryCreationExpressionFactory.create((MultiboundSetBinding) binding);
 
       case MULTIBOUND_MAP:
-        return mapFactoryCreationExpressionFactory.create(binding);
+        return mapFactoryCreationExpressionFactory.create((MultiboundMapBinding) binding);
 
       case DELEGATE:
-        return delegatingFrameworkInstanceCreationExpressionFactory.create(binding);
+        return delegatingFrameworkInstanceCreationExpressionFactory.create(
+            (DelegateBinding) binding);
 
       case OPTIONAL:
-        return optionalFactoryInstanceCreationExpressionFactory.create(binding);
+        return optionalFactoryInstanceCreationExpressionFactory.create((OptionalBinding) binding);
 
       case MEMBERS_INJECTOR:
-        return membersInjectorProviderCreationExpressionFactory.create((ProvisionBinding) binding);
+        return membersInjectorProviderCreationExpressionFactory.create(
+            (MembersInjectorBinding) binding);
 
       default:
         throw new AssertionError(binding);

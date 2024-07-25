@@ -22,10 +22,19 @@ package(default_visibility = ["//:src"])
 
 java_library(
     name = "proguard-processor",
-    srcs = ["ProguardProcessor.java"],
+    srcs = [
+        "KspProguardProcessor.java",
+        "ProguardProcessingStep.java",
+        "ProguardProcessor.java",
+    ],
     javacopts = DOCLINT_HTML_AND_SYNTAX + DOCLINT_REFERENCES,
     deps = [
+        "//java/dagger/android/processor:base_processing_step",
+        "//java/dagger/internal/codegen/xprocessing",
         "//third_party/java/auto:service",
+        "//third_party/java/guava/collect",
+        "//third_party/java/javapoet",
+        "@maven//:com_google_devtools_ksp_symbol_processing_api",
     ],
 )
 

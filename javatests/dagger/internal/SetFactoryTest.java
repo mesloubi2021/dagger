@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.inject.Provider;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;

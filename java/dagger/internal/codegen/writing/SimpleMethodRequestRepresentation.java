@@ -21,25 +21,33 @@ import static androidx.room.compiler.processing.XElementKt.isMethod;
 import static com.google.common.base.Preconditions.checkArgument;
 import static dagger.internal.codegen.javapoet.CodeBlocks.makeParametersCodeBlock;
 import static dagger.internal.codegen.javapoet.TypeNames.rawTypeName;
+import static dagger.internal.codegen.langmodel.Accessibility.isElementAccessibleFrom;
+import static dagger.internal.codegen.langmodel.Accessibility.isRawTypeAccessible;
 import static dagger.internal.codegen.langmodel.Accessibility.isTypeAccessibleFrom;
-import static dagger.internal.codegen.writing.InjectionMethods.ProvisionMethod.requiresInjectionMethod;
+import static dagger.internal.codegen.xprocessing.XElements.asExecutable;
 import static dagger.internal.codegen.xprocessing.XElements.asMethod;
 import static dagger.internal.codegen.xprocessing.XProcessingEnvs.isPreJava8SourceVersion;
 
 import androidx.room.compiler.processing.XElement;
+import androidx.room.compiler.processing.XExecutableElement;
+import androidx.room.compiler.processing.XExecutableParameterElement;
 import androidx.room.compiler.processing.XProcessingEnv;
 import androidx.room.compiler.processing.XType;
 import androidx.room.compiler.processing.XTypeElement;
+import com.google.common.collect.ImmutableSet;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.CodeBlock;
 import com.squareup.javapoet.TypeName;
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
+import dagger.internal.codegen.binding.AssistedInjectionBinding;
 import dagger.internal.codegen.binding.ComponentRequirement;
-import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.binding.InjectionBinding;
 import dagger.internal.codegen.compileroption.CompilerOptions;
 import dagger.internal.codegen.javapoet.Expression;
+import dagger.internal.codegen.model.BindingKind;
 import dagger.internal.codegen.model.DependencyRequest;
 import dagger.internal.codegen.writing.ComponentImplementation.ShardImplementation;
 import dagger.internal.codegen.writing.InjectionMethods.ProvisionMethod;
@@ -50,9 +58,12 @@ import java.util.Optional;
  * {@link dagger.internal.codegen.model.RequestKind#INSTANCE} requests.
  */
 final class SimpleMethodRequestRepresentation extends RequestRepresentation {
+  private static final ImmutableSet<BindingKind> VALID_BINDING_KINDS =
+      ImmutableSet.of(BindingKind.INJECTION, BindingKind.ASSISTED_INJECTION, BindingKind.PROVISION);
+
   private final CompilerOptions compilerOptions;
   private final XProcessingEnv processingEnv;
-  private final ProvisionBinding provisionBinding;
+  private final ContributionBinding binding;
   private final ComponentRequestRepresentations componentRequestRepresentations;
   private final MembersInjectionMethods membersInjectionMethods;
   private final ComponentRequirementExpressions componentRequirementExpressions;
@@ -60,7 +71,7 @@ final class SimpleMethodRequestRepresentation extends RequestRepresentation {
 
   @AssistedInject
   SimpleMethodRequestRepresentation(
-      @Assisted ProvisionBinding binding,
+      @Assisted ContributionBinding binding,
       MembersInjectionMethods membersInjectionMethods,
       CompilerOptions compilerOptions,
       XProcessingEnv processingEnv,
@@ -69,11 +80,9 @@ final class SimpleMethodRequestRepresentation extends RequestRepresentation {
       ComponentImplementation componentImplementation) {
     this.compilerOptions = compilerOptions;
     this.processingEnv = processingEnv;
-    this.provisionBinding = binding;
-    checkArgument(
-        provisionBinding.implicitDependencies().isEmpty(),
-        "framework deps are not currently supported");
-    checkArgument(provisionBinding.bindingElement().isPresent());
+    this.binding = binding;
+    checkArgument(VALID_BINDING_KINDS.contains(binding.kind()));
+    checkArgument(binding.bindingElement().isPresent());
     this.componentRequestRepresentations = componentRequestRepresentations;
     this.membersInjectionMethods = membersInjectionMethods;
     this.componentRequirementExpressions = componentRequirementExpressions;
@@ -82,7 +91,7 @@ final class SimpleMethodRequestRepresentation extends RequestRepresentation {
 
   @Override
   Expression getDependencyExpression(ClassName requestingClass) {
-    return requiresInjectionMethod(provisionBinding, compilerOptions, requestingClass)
+    return requiresInjectionMethod(requestingClass)
         ? invokeInjectionMethod(requestingClass)
         : invokeMethod(requestingClass);
   }
@@ -92,11 +101,11 @@ final class SimpleMethodRequestRepresentation extends RequestRepresentation {
     CodeBlock arguments =
         makeParametersCodeBlock(
             ProvisionMethod.invokeArguments(
-                provisionBinding,
+                binding,
                 request -> dependencyArgument(request, requestingClass).codeBlock(),
                 shardImplementation::getUniqueFieldNameForAssistedParam));
-    XElement bindingElement = provisionBinding.bindingElement().get();
-    XTypeElement bindingTypeElement = provisionBinding.bindingTypeElement().get();
+    XElement bindingElement = binding.bindingElement().get();
+    XTypeElement bindingTypeElement = binding.bindingTypeElement().get();
     CodeBlock invocation;
     if (isConstructor(bindingElement)) {
       invocation = CodeBlock.of("new $T($L)", constructorTypeName(requestingClass), arguments);
@@ -122,7 +131,7 @@ final class SimpleMethodRequestRepresentation extends RequestRepresentation {
   }
 
   private TypeName constructorTypeName(ClassName requestingClass) {
-    XType type = provisionBinding.key().type().xprocessing();
+    XType type = binding.key().type().xprocessing();
     return type.getTypeArguments().stream()
             .allMatch(t -> isTypeAccessibleFrom(t, requestingClass.packageName()))
         ? type.getTypeName()
@@ -132,7 +141,7 @@ final class SimpleMethodRequestRepresentation extends RequestRepresentation {
   private Expression invokeInjectionMethod(ClassName requestingClass) {
     return injectMembers(
         ProvisionMethod.invoke(
-            provisionBinding,
+            binding,
             request -> dependencyArgument(request, requestingClass).codeBlock(),
             shardImplementation::getUniqueFieldNameForAssistedParam,
             requestingClass,
@@ -147,25 +156,24 @@ final class SimpleMethodRequestRepresentation extends RequestRepresentation {
   }
 
   private Expression injectMembers(CodeBlock instance, ClassName requestingClass) {
-    if (provisionBinding.injectionSites().isEmpty()) {
+    if (!hasInjectionSites(binding)) {
       return Expression.create(simpleMethodReturnType(), instance);
     }
     if (isPreJava8SourceVersion(processingEnv)) {
       // Java 7 type inference can't figure out that instance in
       // injectParameterized(Parameterized_Factory.newParameterized()) is Parameterized<T> and not
       // Parameterized<Object>
-      if (!provisionBinding.key().type().xprocessing().getTypeArguments().isEmpty()) {
-        TypeName keyType = provisionBinding.key().type().xprocessing().getTypeName();
+      if (!binding.key().type().xprocessing().getTypeArguments().isEmpty()) {
+        TypeName keyType = binding.key().type().xprocessing().getTypeName();
         instance = CodeBlock.of("($T) ($T) $L", keyType, rawTypeName(keyType), instance);
       }
     }
-    return membersInjectionMethods.getInjectExpression(
-        provisionBinding.key(), instance, requestingClass);
+    return membersInjectionMethods.getInjectExpression(binding.key(), instance, requestingClass);
   }
 
   private Optional<CodeBlock> moduleReference(ClassName requestingClass) {
-    return provisionBinding.requiresModuleInstance()
-        ? provisionBinding
+    return binding.requiresModuleInstance()
+        ? binding
             .contributingModule()
             .map(XTypeElement::getType)
             .map(ComponentRequirement::forModule)
@@ -174,13 +182,35 @@ final class SimpleMethodRequestRepresentation extends RequestRepresentation {
   }
 
   private XType simpleMethodReturnType() {
-    return provisionBinding
-        .contributedPrimitiveType()
-        .orElse(provisionBinding.key().type().xprocessing());
+    return binding.contributedPrimitiveType().orElse(binding.key().type().xprocessing());
+  }
+
+  private boolean requiresInjectionMethod(ClassName requestingClass) {
+    XExecutableElement executableElement = asExecutable(binding.bindingElement().get());
+    return hasInjectionSites(binding)
+        || binding.shouldCheckForNull(compilerOptions)
+        || !isElementAccessibleFrom(executableElement, requestingClass.packageName())
+        // This check should be removable once we drop support for -source 7
+        || executableElement.getParameters().stream()
+            .map(XExecutableParameterElement::getType)
+            .anyMatch(type -> !isRawTypeAccessible(type, requestingClass.packageName()));
+  }
+
+  private static boolean hasInjectionSites(ContributionBinding binding) {
+    switch (binding.kind()) {
+      case INJECTION:
+        return !((InjectionBinding) binding).injectionSites().isEmpty();
+      case ASSISTED_INJECTION:
+        return !((AssistedInjectionBinding) binding).injectionSites().isEmpty();
+      case PROVISION:
+        return false;
+      default:
+        throw new AssertionError("Unexpected binding kind: " + binding.kind());
+    }
   }
 
   @AssistedFactory
   static interface Factory {
-    SimpleMethodRequestRepresentation create(ProvisionBinding binding);
+    SimpleMethodRequestRepresentation create(ContributionBinding binding);
   }
 }

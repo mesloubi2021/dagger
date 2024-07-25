@@ -24,11 +24,14 @@ import com.squareup.javapoet.ClassName;
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
+import dagger.internal.codegen.base.MapType;
 import dagger.internal.codegen.binding.BindsTypeChecker;
 import dagger.internal.codegen.binding.ComponentDescriptor.ComponentMethodDescriptor;
 import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.binding.DelegateBinding;
 import dagger.internal.codegen.binding.FrameworkType;
 import dagger.internal.codegen.javapoet.Expression;
+import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.model.BindingKind;
 import dagger.internal.codegen.model.RequestKind;
 
@@ -59,34 +62,66 @@ final class DerivedFromFrameworkInstanceRequestRepresentation extends RequestRep
 
   @Override
   Expression getDependencyExpression(ClassName requestingClass) {
-    Expression expression =
-        frameworkType.to(
-            requestKind,
-            frameworkRequestRepresentation.getDependencyExpression(requestingClass),
-            processingEnv);
-    return requiresTypeCast(expression, requestingClass)
-        ? expression.castTo(binding.contributedType())
-        : expression;
+    return getDependencyExpressionFromFrameworkExpression(
+        frameworkRequestRepresentation.getDependencyExpression(requestingClass),
+        requestingClass);
   }
 
   @Override
   Expression getDependencyExpressionForComponentMethod(
       ComponentMethodDescriptor componentMethod, ComponentImplementation component) {
+    return getDependencyExpressionFromFrameworkExpression(
+        frameworkRequestRepresentation
+            .getDependencyExpressionForComponentMethod(componentMethod, component),
+        component.name());
+  }
+
+  private Expression getDependencyExpressionFromFrameworkExpression(
+      Expression frameworkExpression, ClassName requestingClass) {
     Expression expression =
         frameworkType.to(
             requestKind,
-            frameworkRequestRepresentation.getDependencyExpressionForComponentMethod(
-                componentMethod, component),
+            frameworkExpression,
             processingEnv);
-    return requiresTypeCast(expression, component.name())
+
+    // If it is a map type we need to do a raw type cast. This is because a user requested field
+    // type like dagger.internal.Provider<Map<K, javax.inject.Provider<V>>> isn't always assignable
+    // from something like dagger.internal.Provider<Map<K, dagger.internal.Provider<V>>> just due
+    // to variance issues.
+    if (MapType.isMapOfProvider(binding.contributedType())) {
+      return castMapOfProvider(expression, binding);
+    }
+
+    return requiresTypeCast(expression, requestingClass)
         ? expression.castTo(binding.contributedType())
         : expression;
+  }
+
+  private Expression castMapOfProvider(Expression expression, ContributionBinding binding) {
+    switch (requestKind) {
+      case INSTANCE:
+        return expression.castTo(binding.contributedType());
+      case PROVIDER:
+      case PROVIDER_OF_LAZY:
+        return expression.castTo(processingEnv.requireType(TypeNames.DAGGER_PROVIDER).getRawType());
+      case LAZY:
+        return expression.castTo(processingEnv.requireType(TypeNames.LAZY).getRawType());
+      case PRODUCER:
+      case FUTURE:
+        return expression.castTo(processingEnv.requireType(TypeNames.PRODUCER).getRawType());
+      case PRODUCED:
+        return expression.castTo(processingEnv.requireType(TypeNames.PRODUCED).getRawType());
+
+      case MEMBERS_INJECTION: // fall through
+    }
+    throw new IllegalStateException("Unexpected request kind: " + requestKind);
   }
 
   private boolean requiresTypeCast(Expression expression, ClassName requestingClass) {
     return binding.kind().equals(BindingKind.DELEGATE)
         && requestKind.equals(RequestKind.INSTANCE)
-        && instanceRequiresCast(binding, expression, requestingClass, bindsTypeChecker);
+        && instanceRequiresCast(
+            (DelegateBinding) binding, expression, requestingClass, bindsTypeChecker);
   }
 
   @AssistedFactory

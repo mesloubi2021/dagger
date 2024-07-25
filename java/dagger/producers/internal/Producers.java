@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.util.concurrent.Futures.catchingAsync;
 import static com.google.common.util.concurrent.Futures.transform;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static dagger.internal.Providers.asDaggerProvider;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
@@ -27,12 +28,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import dagger.internal.Provider;
 import dagger.producers.Produced;
 import dagger.producers.Producer;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.inject.Provider;
 
 /**
  * Utility methods for use in generated producer code.
@@ -132,6 +133,15 @@ public final class Producers {
         return Futures.immediateFuture(provider.get());
       }
     };
+  }
+
+  /**
+   * Legacy javax version of the method to support libraries compiled with an older version of
+   * Dagger. Do not use directly.
+   */
+  @Deprecated
+  public static <T> Producer<T> producerFromProvider(final javax.inject.Provider<T> provider) {
+    return producerFromProvider(asDaggerProvider(provider));
   }
 
   /**

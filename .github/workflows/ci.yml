@@ -11,9 +11,11 @@ on:
 env:
   USE_JAVA_DISTRIBUTION: 'zulu'
   USE_JAVA_VERSION: '11'
-  # Our Bazel builds currently rely on 6.3.2. The version is set via
+  # This is required by AGP 8.3+.
+  USE_JAVA_VERSION_FOR_PLUGIN: '17'
+  # Our Bazel builds currently rely on 6.4.0. The version is set via
   # baselisk by USE_BAZEL_VERSION: https://github.com/bazelbuild/bazelisk.
-  USE_BAZEL_VERSION: '6.3.2'
+  USE_BAZEL_VERSION: '6.4.0'
   # The default Maven 3.9.0 has a regression so we manually install 3.8.7.
   # https://issues.apache.org/jira/browse/MNG-7679
   USE_MAVEN_VERSION: '3.8.7'
@@ -35,7 +37,9 @@ jobs:
   bazel-test:
     name: 'Bazel tests'
     needs: validate-latest-dagger-version
-    runs-on: ubuntu-latest
+    runs-on:
+      group: large-runner-group
+      labels: ubuntu-22.04-16core
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/bazel-test
@@ -59,24 +63,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        agp: ['7.0.0', '7.1.2']
+        include:
+          - agp: '7.0.0'
+            jdk: '11'
+          - agp: '7.1.2'
+            jdk: '11'
+          - agp: '8.1.0'
+            jdk: '17'
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/artifact-android-local-tests
         with:
           agp: '${{ matrix.agp }}'
-  artifact-android-emulator-tests:
-    name: 'Artifact Android emulator tests (API 30)'
-    needs: bazel-build
-    # It's recommended to run emulator tests on macOS
-    # See https://github.com/marketplace/actions/android-emulator-runner
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/artifact-android-emulator-tests
-        timeout-minutes: 30 # TODO(b/287486065) investigate whether there is performance regression
-        with:
-          api-level: '30'
+          jdk: '${{ matrix.jdk }}'
   artifact-android-emulator-legacy-api-tests:
     name: 'Artifact Android emulator tests (API ${{ matrix.api-level }})'
     # We only run this on master push (essentially a postsubmit) since these
@@ -88,11 +87,11 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix: # Run on 16 (PreL), 21 (L), and 26 (O).
-        api-level: [16, 21, 26]
+        api-level: [16, 21, 26, 30]
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/artifact-android-emulator-tests
-        timeout-minutes: 25
+        timeout-minutes: 35
         with:
           api-level: '${{ matrix.api-level }}'
   publish-snapshot:

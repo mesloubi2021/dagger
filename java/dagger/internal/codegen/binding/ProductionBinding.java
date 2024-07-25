@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 The Dagger Authors.
+ * Copyright (C) 2024 The Dagger Authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,22 @@
 
 package dagger.internal.codegen.binding;
 
-import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
-import static dagger.internal.codegen.javapoet.TypeNames.isFutureType;
-
-import androidx.room.compiler.processing.XMethodElement;
-import androidx.room.compiler.processing.XType;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import dagger.internal.codegen.base.ContributionType;
-import dagger.internal.codegen.base.SetType;
+import dagger.internal.codegen.model.BindingKind;
 import dagger.internal.codegen.model.DependencyRequest;
-import dagger.internal.codegen.model.Key;
-import java.util.Optional;
-import java.util.stream.Stream;
 
-/** A value object representing the mechanism by which a {@link Key} can be produced. */
+/** A binding for a {@link BindingKind#PRODUCTION}. */
 @CheckReturnValue
 @AutoValue
 public abstract class ProductionBinding extends ContributionBinding {
+  @Override
+  public BindingKind kind() {
+    return BindingKind.PRODUCTION;
+  }
 
   @Override
   public BindingType bindingType() {
@@ -45,61 +39,32 @@ public abstract class ProductionBinding extends ContributionBinding {
   }
 
   @Override
-  public abstract Optional<ProductionBinding> unresolved();
+  @Memoized
+  public ContributionType contributionType() {
+    return ContributionType.fromBindingElement(bindingElement().get());
+  }
 
   @Override
-  public ImmutableSet<DependencyRequest> implicitDependencies() {
-    return Stream.of(executorRequest(), monitorRequest())
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(toImmutableSet());
+  public Nullability nullability() {
+    return Nullability.NOT_NULLABLE;
   }
 
-  /** What kind of object a {@code @Produces}-annotated method returns. */
-  public enum ProductionKind {
-    /** A value. */
-    IMMEDIATE,
-    /** A {@code ListenableFuture<T>}. */
-    FUTURE,
-    /** A {@code Set<ListenableFuture<T>>}. */
-    SET_OF_FUTURE;
+  /** Dependencies necessary to invoke the {@code @Produces} method. */
+  public abstract ImmutableSet<DependencyRequest> explicitDependencies();
 
-    /** Returns the kind of object a {@code @Produces}-annotated method returns. */
-    public static ProductionKind fromProducesMethod(XMethodElement producesMethod) {
-      if (isFutureType(producesMethod.getReturnType())) {
-        return FUTURE;
-      } else if (ContributionType.fromBindingElement(producesMethod)
-              .equals(ContributionType.SET_VALUES)
-          && isFutureType(SetType.from(producesMethod.getReturnType()).elementType())) {
-        return SET_OF_FUTURE;
-      } else {
-        return IMMEDIATE;
-      }
-    }
+  @Override
+  @Memoized
+  public ImmutableSet<DependencyRequest> dependencies() {
+    return ImmutableSet.<DependencyRequest>builder()
+        .add(executorRequest())
+        .add(monitorRequest())
+        .addAll(explicitDependencies())
+        .build();
   }
 
-  /**
-   * Returns the kind of object the produces method returns. All production bindings from
-   * {@code @Produces} methods will have a production kind, but synthetic production bindings may
-   * not.
-   */
-  public abstract Optional<ProductionKind> productionKind();
+  public abstract DependencyRequest executorRequest();
 
-  /** Returns the list of types in the throws clause of the method. */
-  public abstract ImmutableList<XType> thrownTypes();
-
-  /**
-   * If this production requires an executor, this will be the corresponding request.  All
-   * production bindings from {@code @Produces} methods will have an executor request, but
-   * synthetic production bindings may not.
-   */
-  abstract Optional<DependencyRequest> executorRequest();
-
-  /** If this production requires a monitor, this will be the corresponding request.  All
-   * production bindings from {@code @Produces} methods will have a monitor request, but synthetic
-   * production bindings may not.
-   */
-  abstract Optional<DependencyRequest> monitorRequest();
+  public abstract DependencyRequest monitorRequest();
 
   // Profiling determined that this method is called enough times that memoizing it had a measurable
   // performance improvement for large components.
@@ -107,13 +72,6 @@ public abstract class ProductionBinding extends ContributionBinding {
   @Override
   public boolean requiresModuleInstance() {
     return super.requiresModuleInstance();
-  }
-
-  public static Builder builder() {
-    return new AutoValue_ProductionBinding.Builder()
-        .nullability(Nullability.NOT_NULLABLE)
-        .explicitDependencies(ImmutableList.<DependencyRequest>of())
-        .thrownTypes(ImmutableList.<XType>of());
   }
 
   @Override
@@ -127,28 +85,17 @@ public abstract class ProductionBinding extends ContributionBinding {
   @Override
   public abstract boolean equals(Object obj);
 
+  static Builder builder() {
+    return new AutoValue_ProductionBinding.Builder();
+  }
+
   /** A {@link ProductionBinding} builder. */
   @AutoValue.Builder
-  public abstract static class Builder
-      extends ContributionBinding.Builder<ProductionBinding, Builder> {
-
-    @CanIgnoreReturnValue
-    @Override
-    public Builder dependencies(Iterable<DependencyRequest> dependencies) {
-      return explicitDependencies(dependencies);
-    }
-
-    abstract Builder explicitDependencies(Iterable<DependencyRequest> dependencies);
-
-    abstract Builder productionKind(ProductionKind productionKind);
-
-    @Override
-    public abstract Builder unresolved(ProductionBinding unresolved);
-
-    abstract Builder thrownTypes(Iterable<XType> thrownTypes);
-
+  abstract static class Builder extends ContributionBinding.Builder<ProductionBinding, Builder> {
     abstract Builder executorRequest(DependencyRequest executorRequest);
 
     abstract Builder monitorRequest(DependencyRequest monitorRequest);
+
+    abstract Builder explicitDependencies(Iterable<DependencyRequest> explicitDependencies);
   }
 }

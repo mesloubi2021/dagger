@@ -18,7 +18,9 @@ import javax.annotation.processing.Generated;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 public final class ChildNumberModule_ProvideNumberFactory implements Factory<Number> {
   private final ChildNumberModule module;

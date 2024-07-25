@@ -3,8 +3,8 @@ package dagger.internal.codegen;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.DelegateFactory;
 import dagger.internal.DoubleCheck;
+import dagger.internal.Provider;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -15,7 +15,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -98,37 +100,37 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<Binding1> providerBinding1() {
+    public javax.inject.Provider<Binding1> providerBinding1() {
       return testComponentImpl.testComponentImplShard2.binding1Provider;
     }
 
     @Override
-    public Provider<Binding2> providerBinding2() {
+    public javax.inject.Provider<Binding2> providerBinding2() {
       return testComponentImpl.testComponentImplShard.binding2Provider;
     }
 
     @Override
-    public Provider<Binding3> providerBinding3() {
+    public javax.inject.Provider<Binding3> providerBinding3() {
       return testComponentImpl.testComponentImplShard.binding3Provider;
     }
 
     @Override
-    public Provider<Binding4> providerBinding4() {
+    public javax.inject.Provider<Binding4> providerBinding4() {
       return testComponentImpl.testComponentImplShard.binding4Provider;
     }
 
     @Override
-    public Provider<Binding5> providerBinding5() {
+    public javax.inject.Provider<Binding5> providerBinding5() {
       return testComponentImpl.testComponentImplShard.binding5Provider;
     }
 
     @Override
-    public Provider<Binding6> providerBinding6() {
+    public javax.inject.Provider<Binding6> providerBinding6() {
       return binding6Provider;
     }
 
     @Override
-    public Provider<Binding7> providerBinding7() {
+    public javax.inject.Provider<Binding7> providerBinding7() {
       return binding7Provider;
     }
   }

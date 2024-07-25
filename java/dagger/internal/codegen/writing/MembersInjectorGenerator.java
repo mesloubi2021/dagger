@@ -25,11 +25,13 @@ import static dagger.internal.codegen.binding.SourceFiles.generateBindingFieldsF
 import static dagger.internal.codegen.binding.SourceFiles.membersInjectorNameForType;
 import static dagger.internal.codegen.binding.SourceFiles.parameterizedGeneratedTypeNameForBinding;
 import static dagger.internal.codegen.extension.DaggerStreams.presentValues;
+import static dagger.internal.codegen.extension.DaggerStreams.toImmutableList;
 import static dagger.internal.codegen.javapoet.AnnotationSpecs.Suppression.RAWTYPES;
-import static dagger.internal.codegen.javapoet.AnnotationSpecs.Suppression.UNCHECKED;
 import static dagger.internal.codegen.javapoet.AnnotationSpecs.suppressWarnings;
-import static dagger.internal.codegen.javapoet.CodeBlocks.toParametersCodeBlock;
+import static dagger.internal.codegen.javapoet.CodeBlocks.parameterNames;
+import static dagger.internal.codegen.javapoet.CodeBlocks.toConcatenatedCodeBlock;
 import static dagger.internal.codegen.javapoet.TypeNames.membersInjectorOf;
+import static dagger.internal.codegen.javapoet.TypeNames.rawTypeName;
 import static dagger.internal.codegen.langmodel.Accessibility.isTypeAccessibleFrom;
 import static dagger.internal.codegen.writing.GwtCompatibility.gwtIncompatibleAnnotation;
 import static javax.lang.model.element.Modifier.FINAL;
@@ -40,6 +42,7 @@ import static javax.lang.model.element.Modifier.STATIC;
 import androidx.room.compiler.processing.XElement;
 import androidx.room.compiler.processing.XFiler;
 import androidx.room.compiler.processing.XProcessingEnv;
+import androidx.room.compiler.processing.XType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.squareup.javapoet.AnnotationSpec;
@@ -54,16 +57,13 @@ import com.squareup.javapoet.TypeVariableName;
 import dagger.MembersInjector;
 import dagger.internal.codegen.base.SourceFileGenerator;
 import dagger.internal.codegen.base.UniqueNameSet;
-import dagger.internal.codegen.binding.FrameworkField;
 import dagger.internal.codegen.binding.MembersInjectionBinding;
-import dagger.internal.codegen.binding.MembersInjectionBinding.InjectionSite;
 import dagger.internal.codegen.binding.SourceFiles;
 import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.model.DaggerAnnotation;
 import dagger.internal.codegen.model.DependencyRequest;
 import dagger.internal.codegen.model.Key;
 import dagger.internal.codegen.writing.InjectionMethods.InjectionSiteMethod;
-import java.util.Map.Entry;
 import javax.inject.Inject;
 
 /**
@@ -97,109 +97,112 @@ public final class MembersInjectorGenerator extends SourceFileGenerator<MembersI
 
     ClassName generatedTypeName = membersInjectorNameForType(binding.membersInjectedType());
     ImmutableList<TypeVariableName> typeParameters = bindingTypeElementTypeVariableNames(binding);
+    ImmutableMap<DependencyRequest, FieldSpec> frameworkFields = frameworkFields(binding);
     TypeSpec.Builder injectorTypeBuilder =
         classBuilder(generatedTypeName)
             .addModifiers(PUBLIC, FINAL)
             .addTypeVariables(typeParameters)
-            .addAnnotation(qualifierMetadataAnnotation(binding));
-
-    TypeName injectedTypeName = binding.key().type().xprocessing().getTypeName();
-    TypeName implementedType = membersInjectorOf(injectedTypeName);
-    injectorTypeBuilder.addSuperinterface(implementedType);
-
-    MethodSpec.Builder injectMembersBuilder =
-        methodBuilder("injectMembers")
-            .addModifiers(PUBLIC)
-            .addAnnotation(Override.class)
-            .addParameter(injectedTypeName, "instance");
-
-    ImmutableMap<DependencyRequest, FrameworkField> fields =
-        generateBindingFieldsForDependencies(binding);
-
-    ImmutableMap.Builder<DependencyRequest, FieldSpec> dependencyFieldsBuilder =
-        ImmutableMap.builder();
-
-    MethodSpec.Builder constructorBuilder = constructorBuilder().addModifiers(PUBLIC);
-
-    // We use a static create method so that generated components can avoid having
-    // to refer to the generic types of the factory.
-    // (Otherwise they may have visibility problems referring to the types.)
-    MethodSpec.Builder createMethodBuilder =
-        methodBuilder("create")
-            .returns(implementedType)
-            .addModifiers(PUBLIC, STATIC)
-            .addTypeVariables(typeParameters);
-
-    createMethodBuilder.addCode(
-        "return new $T(", parameterizedGeneratedTypeNameForBinding(binding));
-    ImmutableList.Builder<CodeBlock> constructorInvocationParameters = ImmutableList.builder();
-
-    boolean usesRawFrameworkTypes = false;
-    UniqueNameSet fieldNames = new UniqueNameSet();
-    for (Entry<DependencyRequest, FrameworkField> fieldEntry : fields.entrySet()) {
-      DependencyRequest dependency = fieldEntry.getKey();
-      FrameworkField bindingField = fieldEntry.getValue();
-
-      // If the dependency type is not visible to this members injector, then use the raw framework
-      // type for the field.
-      boolean useRawFrameworkType =
-          !isTypeAccessibleFrom(
-              dependency.key().type().xprocessing(), generatedTypeName.packageName());
-
-      String fieldName = fieldNames.getUniqueName(bindingField.name());
-      TypeName fieldType = useRawFrameworkType ? bindingField.type().rawType : bindingField.type();
-      FieldSpec.Builder fieldBuilder = FieldSpec.builder(fieldType, fieldName, PRIVATE, FINAL);
-      ParameterSpec.Builder parameterBuilder = ParameterSpec.builder(fieldType, fieldName);
-
-      // If we're using the raw type for the field, then suppress the injectMembers method's
-      // unchecked-type warning and the field's and the constructor and create-method's
-      // parameters' raw-type warnings.
-      if (useRawFrameworkType) {
-        usesRawFrameworkTypes = true;
-        fieldBuilder.addAnnotation(suppressWarnings(RAWTYPES));
-        parameterBuilder.addAnnotation(suppressWarnings(RAWTYPES));
-      }
-      constructorBuilder.addParameter(parameterBuilder.build());
-      createMethodBuilder.addParameter(parameterBuilder.build());
-
-      FieldSpec field = fieldBuilder.build();
-      injectorTypeBuilder.addField(field);
-      constructorBuilder.addStatement("this.$1N = $1N", field);
-      dependencyFieldsBuilder.put(dependency, field);
-      constructorInvocationParameters.add(CodeBlock.of("$N", field));
-    }
-
-    createMethodBuilder.addCode(
-        constructorInvocationParameters.build().stream().collect(toParametersCodeBlock()));
-    createMethodBuilder.addCode(");");
-
-    injectorTypeBuilder.addMethod(constructorBuilder.build());
-    injectorTypeBuilder.addMethod(createMethodBuilder.build());
-
-    ImmutableMap<DependencyRequest, FieldSpec> dependencyFields = dependencyFieldsBuilder.build();
-
-    injectMembersBuilder.addCode(
-        InjectionSiteMethod.invokeAll(
-            binding.injectionSites(),
-            generatedTypeName,
-            CodeBlock.of("instance"),
-            binding.key().type().xprocessing(),
-            sourceFiles.frameworkFieldUsages(binding.dependencies(), dependencyFields)::get));
-
-    if (usesRawFrameworkTypes) {
-      injectMembersBuilder.addAnnotation(suppressWarnings(UNCHECKED));
-    }
-    injectorTypeBuilder.addMethod(injectMembersBuilder.build());
-
-    for (InjectionSite injectionSite : binding.injectionSites()) {
-      if (injectionSite.enclosingTypeElement().equals(binding.membersInjectedType())) {
-        injectorTypeBuilder.addMethod(InjectionSiteMethod.create(injectionSite));
-      }
-    }
+            .addAnnotation(qualifierMetadataAnnotation(binding))
+            .addSuperinterface(membersInjectorOf(binding.key().type().xprocessing().getTypeName()))
+            .addFields(frameworkFields.values())
+            .addMethod(constructor(frameworkFields))
+            .addMethod(createMethod(binding, frameworkFields))
+            .addMethod(injectMembersMethod(binding, frameworkFields))
+            .addMethods(
+                binding.injectionSites().stream()
+                    .filter(
+                        site -> site.enclosingTypeElement().equals(binding.membersInjectedType()))
+                    .map(InjectionSiteMethod::create)
+                    .collect(toImmutableList()));
 
     gwtIncompatibleAnnotation(binding).ifPresent(injectorTypeBuilder::addAnnotation);
 
     return ImmutableList.of(injectorTypeBuilder);
+  }
+
+  // MyClass(
+  //     Provider<Dep1> dep1Provider,
+  //     Provider<Dep2> dep2Provider,
+  //     // Note: The raw type can happen if Dep3 is injected in a super type and not accessible to
+  //     // the parent. Ideally, we would have passed in the parent MembersInjector instance itself
+  //     // which would have avoided this situation, but doing it now would cause version skew.
+  //     @SuppressWarnings("RAW_TYPE") Provider dep3Provider) {
+  //   this.dep1Provider = dep1Provider;
+  //   this.dep2Provider = dep2Provider;
+  //   this.dep3Provider = dep3Provider;
+  // }
+  private MethodSpec constructor(ImmutableMap<DependencyRequest, FieldSpec> frameworkFields) {
+    ImmutableList<ParameterSpec> dependencyParameters =
+        frameworkFields.values().stream()
+            .map(
+                field ->
+                    ParameterSpec.builder(field.type, field.name)
+                        .addAnnotations(field.annotations)
+                        .build())
+            .collect(toImmutableList());
+    return constructorBuilder()
+        .addModifiers(PUBLIC)
+        .addParameters(dependencyParameters)
+        .addCode(
+            dependencyParameters.stream()
+                .map(parameter -> CodeBlock.of("this.$1N = $1N;", parameter))
+                .collect(toConcatenatedCodeBlock()))
+        .build();
+  }
+
+  // public static MyClass_MembersInjector create(
+  //     Provider<Dep1> dep1Provider,
+  //     Provider<Dep2> dep2Provider,
+  //     // Note: The raw type can happen if Dep3 is injected in a super type and not accessible to
+  //     // the parent. Ideally, we would have passed in the parent MembersInjector instance itself
+  //     // which would have avoided this situation, but doing it now would cause version skew.
+  //     @SuppressWarnings("RAW_TYPE") Provider dep3Provider) {
+  //   return new MyClass_MembersInjector(dep1Provider, dep2Provider, dep3Provider);
+  // }
+  private MethodSpec createMethod(
+      MembersInjectionBinding binding,
+      ImmutableMap<DependencyRequest, FieldSpec> frameworkFields) {
+    MethodSpec constructor = constructor(frameworkFields);
+    // We use a static create method so that generated components can avoid having
+    // to refer to the generic types of the factory.
+    // (Otherwise they may have visibility problems referring to the types.)
+    return methodBuilder("create")
+        .addModifiers(PUBLIC, STATIC)
+        .addTypeVariables(bindingTypeElementTypeVariableNames(binding))
+        .returns(membersInjectorOf(binding.key().type().xprocessing().getTypeName()))
+        .addParameters(constructor.parameters)
+        .addStatement(
+            "return new $T($L)",
+            parameterizedGeneratedTypeNameForBinding(binding),
+            parameterNames(constructor.parameters))
+        .build();
+  }
+
+  // @Override
+  // public void injectMembers(Thing instance) {
+  //   injectDep1(instance, dep1Provider.get());
+  //   injectSomeMethod(instance, dep2Provider.get());
+  //   // This is a case where Dep3 is injected in the base class.
+  //   MyBaseClass_MembersInjector.injectDep3(instance, dep3Provider.get());
+  // }
+  private MethodSpec injectMembersMethod(
+      MembersInjectionBinding binding,
+      ImmutableMap<DependencyRequest, FieldSpec> frameworkFields) {
+    XType instanceType = binding.key().type().xprocessing();
+    ImmutableMap<DependencyRequest, CodeBlock> dependencyCodeBlocks =
+        sourceFiles.frameworkFieldUsages(binding.dependencies(), frameworkFields);
+    return methodBuilder("injectMembers")
+        .addModifiers(PUBLIC)
+        .addAnnotation(Override.class)
+        .addParameter(instanceType.getTypeName(), "instance")
+        .addCode(
+            InjectionSiteMethod.invokeAll(
+                binding.injectionSites(),
+                membersInjectorNameForType(binding.membersInjectedType()),
+                CodeBlock.of("instance"),
+                instanceType,
+                dependencyCodeBlocks::get))
+        .build();
   }
 
   private AnnotationSpec qualifierMetadataAnnotation(MembersInjectionBinding binding) {
@@ -219,5 +222,33 @@ public final class MembersInjectorGenerator extends SourceFileGenerator<MembersI
         .distinct()
         .forEach(qualifier -> builder.addMember("value", "$S", qualifier));
     return builder.build();
+  }
+
+  private static ImmutableMap<DependencyRequest, FieldSpec> frameworkFields(
+      MembersInjectionBinding binding) {
+    UniqueNameSet fieldNames = new UniqueNameSet();
+    ClassName membersInjectorTypeName = membersInjectorNameForType(binding.membersInjectedType());
+    ImmutableMap.Builder<DependencyRequest, FieldSpec> builder = ImmutableMap.builder();
+    generateBindingFieldsForDependencies(binding)
+        .forEach(
+            (request, bindingField) -> {
+              // If the dependency type is not visible to this members injector, then use the raw
+              // framework type for the field.
+              boolean useRawFrameworkType =
+                  !isTypeAccessibleFrom(
+                      request.key().type().xprocessing(),
+                      membersInjectorTypeName.packageName());
+              TypeName fieldType =
+                  useRawFrameworkType ? rawTypeName(bindingField.type()) : bindingField.type();
+              String fieldName = fieldNames.getUniqueName(bindingField.name());
+              FieldSpec field =
+                  useRawFrameworkType
+                      ? FieldSpec.builder(fieldType, fieldName, PRIVATE, FINAL)
+                          .addAnnotation(suppressWarnings(RAWTYPES))
+                          .build()
+                      : FieldSpec.builder(fieldType, fieldName, PRIVATE, FINAL).build();
+              builder.put(request, field);
+            });
+    return builder.buildOrThrow();
   }
 }

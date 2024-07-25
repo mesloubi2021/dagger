@@ -146,11 +146,15 @@ public class AnnotationCreatorGenerator extends SourceFileGenerator<XTypeElement
       XTypeElement annotationElement, Set<XTypeElement> annotationElements) {
     if (annotationElements.add(annotationElement)) {
       for (XMethodElement method : annotationElement.getDeclaredMethods()) {
-        XTypeElement returnType = method.getReturnType().getTypeElement();
+        XType returnType = method.getReturnType();
+        XTypeElement maybeAnnotationType =
+            isArray(returnType)
+                ? asArray(returnType).getComponentType().getTypeElement()
+                : returnType.getTypeElement();
         // Return type may be null if it doesn't return a type or type is not known
-        if (returnType != null && returnType.isAnnotationClass()) {
+        if (maybeAnnotationType != null && maybeAnnotationType.isAnnotationClass()) {
           // Ignore the return value since this method is just an accumulator method.
-          nestedAnnotationElements(returnType, annotationElements);
+          nestedAnnotationElements(maybeAnnotationType, annotationElements);
         }
       }
     }

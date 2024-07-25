@@ -35,6 +35,7 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeSpec;
 import dagger.Module;
 import dagger.internal.codegen.base.SourceFileGenerator;
+import dagger.internal.codegen.binding.MonitoringModules;
 import dagger.internal.codegen.binding.SourceFiles;
 import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.multibindings.Multibinds;
@@ -42,10 +43,15 @@ import javax.inject.Inject;
 
 /** Generates a monitoring module for use with production components. */
 final class MonitoringModuleGenerator extends SourceFileGenerator<XTypeElement> {
+  private final MonitoringModules monitoringModules;
 
   @Inject
-  MonitoringModuleGenerator(XFiler filer, XProcessingEnv processingEnv) {
+  MonitoringModuleGenerator(
+      XFiler filer,
+      XProcessingEnv processingEnv,
+      MonitoringModules monitoringModules) {
     super(filer, processingEnv);
+    this.monitoringModules = monitoringModules;
   }
 
   @Override
@@ -55,6 +61,7 @@ final class MonitoringModuleGenerator extends SourceFileGenerator<XTypeElement> 
 
   @Override
   public ImmutableList<TypeSpec.Builder> topLevelTypes(XTypeElement componentElement) {
+    monitoringModules.add(SourceFiles.generatedMonitoringModuleName(componentElement));
     return ImmutableList.of(
         classBuilder(SourceFiles.generatedMonitoringModuleName(componentElement))
             .addAnnotation(Module.class)

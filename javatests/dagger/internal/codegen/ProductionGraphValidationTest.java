@@ -195,14 +195,11 @@ public class ProductionGraphValidationTest {
                 .buildOrThrow())
         .compile(
             subject -> {
-              subject.hasErrorCount(2);
+              subject.hasErrorCount(1);
               subject.hasErrorContaining(
                       "TestClass.A is a provision, which cannot depend on a production.")
                   .onSource(component)
                   .onLineContaining("class AModule");
-              subject.hasErrorContaining("test.TestClass.AModule has errors")
-                  .onSource(component)
-                  .onLineContaining("@ProductionComponent");
             });
   }
 

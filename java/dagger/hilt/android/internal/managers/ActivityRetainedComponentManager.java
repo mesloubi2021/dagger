@@ -23,6 +23,7 @@ import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelStoreOwner;
+import androidx.lifecycle.viewmodel.CreationExtras;
 import dagger.Module;
 import dagger.Provides;
 import dagger.hilt.EntryPoint;
@@ -57,13 +58,20 @@ final class ActivityRetainedComponentManager
 
   static final class ActivityRetainedComponentViewModel extends ViewModel {
     private final ActivityRetainedComponent component;
+    private final SavedStateHandleHolder savedStateHandleHolder;
 
-    ActivityRetainedComponentViewModel(ActivityRetainedComponent component) {
+    ActivityRetainedComponentViewModel(
+        ActivityRetainedComponent component, SavedStateHandleHolder savedStateHandleHolder) {
       this.component = component;
+      this.savedStateHandleHolder = savedStateHandleHolder;
     }
 
     ActivityRetainedComponent getComponent() {
       return component;
+    }
+
+    SavedStateHandleHolder getSavedStateHandleHolder() {
+      return savedStateHandleHolder;
     }
 
     @Override
@@ -95,13 +103,17 @@ final class ActivityRetainedComponentManager
           @NonNull
           @Override
           @SuppressWarnings("unchecked")
-          public <T extends ViewModel> T create(@NonNull Class<T> aClass) {
+          public <T extends ViewModel> T create(
+              @NonNull Class<T> aClass, CreationExtras creationExtras) {
+            SavedStateHandleHolder savedStateHandleHolder =
+                new SavedStateHandleHolder(creationExtras);
             ActivityRetainedComponent component =
                 EntryPointAccessors.fromApplication(
-                    context, ActivityRetainedComponentBuilderEntryPoint.class)
+                        context, ActivityRetainedComponentBuilderEntryPoint.class)
                     .retainedComponentBuilder()
+                    .savedStateHandleHolder(savedStateHandleHolder)
                     .build();
-            return (T) new ActivityRetainedComponentViewModel(component);
+            return (T) new ActivityRetainedComponentViewModel(component, savedStateHandleHolder);
           }
         });
   }
@@ -116,6 +128,12 @@ final class ActivityRetainedComponentManager
       }
     }
     return component;
+  }
+
+  public SavedStateHandleHolder getSavedStateHandleHolder() {
+    return getViewModelProvider(viewModelStoreOwner, context)
+        .get(ActivityRetainedComponentViewModel.class)
+        .getSavedStateHandleHolder();
   }
 
   private ActivityRetainedComponent createComponent() {

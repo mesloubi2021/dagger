@@ -18,6 +18,7 @@ package dagger.producers.internal;
 
 import static com.google.common.util.concurrent.Futures.transform;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static dagger.internal.Providers.asDaggerProvider;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
@@ -25,11 +26,11 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import dagger.internal.Provider;
 import dagger.producers.Produced;
 import dagger.producers.Producer;
 import java.util.List;
 import java.util.Map;
-import javax.inject.Provider;
 
 /**
  * A {@link Producer} implementation used to implement {@link Map} bindings. This producer returns a
@@ -106,6 +107,15 @@ public final class MapOfProducedProducer<K, V> extends AbstractMapProducer<K, V,
     public Builder<K, V> put(K key, Provider<V> providerOfValue) {
       super.put(key, providerOfValue);
       return this;
+    }
+
+    /**
+     * Legacy javax version of the method to support libraries compiled with an older version of
+     * Dagger. Do not use directly.
+     */
+    @Deprecated
+    public Builder<K, V> put(K key, javax.inject.Provider<V> providerOfValue) {
+      return put(key, asDaggerProvider(providerOfValue));
     }
 
     @Override

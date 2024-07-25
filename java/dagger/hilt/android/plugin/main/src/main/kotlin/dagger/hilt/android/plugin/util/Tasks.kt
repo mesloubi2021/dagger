@@ -49,7 +49,9 @@ internal fun addKaptTaskProcessorOptions(
     """.trimIndent()
   }
   project.tasks.withType(KaptTask::class.java) { task ->
-    if (task.name == "kapt${component.name.capitalize()}Kotlin") {
+    if (task.name == "kapt${component.name.capitalize()}Kotlin" ||
+        // Task names in shared/src/AndroidMain in KMP projects has a platform suffix.
+        task.name == "kapt${component.name.capitalize()}KotlinAndroid") {
       val argProvider = produceArgProvider.invoke(task)
       // TODO: Update once KT-58009 is fixed.
       try {
@@ -83,7 +85,9 @@ internal fun addKspTaskProcessorOptions(
     """.trimIndent()
   }
   project.tasks.withType(KspTaskJvm::class.java) { task ->
-    if (task.name == "ksp${component.name.capitalize()}Kotlin") {
+    if (task.name == "ksp${component.name.capitalize()}Kotlin" ||
+        // Task names in shared/src/AndroidMain in KMP projects has a platform suffix.
+        task.name == "ksp${component.name.capitalize()}KotlinAndroid") {
       task.commandLineArgumentProviders.add(produceArgProvider.invoke(task))
     }
   }
@@ -103,3 +107,4 @@ internal fun Task.isKspTask(): Boolean = try {
 } catch (ex: ClassNotFoundException) {
   false
 }
+

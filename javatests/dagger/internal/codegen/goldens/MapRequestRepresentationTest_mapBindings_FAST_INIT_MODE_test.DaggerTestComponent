@@ -2,10 +2,10 @@ package test;
 
 import dagger.internal.DaggerGenerated;
 import dagger.internal.MapBuilder;
+import dagger.internal.Provider;
 import java.util.Collections;
 import java.util.Map;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -16,7 +16,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -70,8 +72,8 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Map<String, Provider<String>> providerStrings() {
-      return Collections.<String, Provider<String>>emptyMap();
+    public Map<String, javax.inject.Provider<String>> providerStrings() {
+      return Collections.<String, javax.inject.Provider<String>>emptyMap();
     }
 
     @Override
@@ -80,8 +82,8 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Map<Integer, Provider<Integer>> providerInts() {
-      return Collections.<Integer, Provider<Integer>>singletonMap(0, provideIntProvider);
+    public Map<Integer, javax.inject.Provider<Integer>> providerInts() {
+      return Collections.<Integer, javax.inject.Provider<Integer>>singletonMap(0, provideIntProvider);
     }
 
     @Override
@@ -90,8 +92,8 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Map<Long, Provider<Long>> providerLongs() {
-      return MapBuilder.<Long, Provider<Long>>newMapBuilder(3).put(0L, provideLong0Provider).put(1L, provideLong1Provider).put(2L, provideLong2Provider).build();
+    public Map<Long, javax.inject.Provider<Long>> providerLongs() {
+      return MapBuilder.<Long, javax.inject.Provider<Long>>newMapBuilder(3).put(0L, provideLong0Provider).put(1L, provideLong1Provider).put(2L, provideLong2Provider).build();
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {

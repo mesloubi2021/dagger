@@ -26,11 +26,13 @@ import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 
-const val TASK = ":app:hiltJavaCompileDebug"
+// `hiltJavaCompileDebug` gets to run as well as `transformDebugClassesWithAsm` depends on it.
+const val TASK = ":app:transformDebugClassesWithAsm"
 
 @RunWith(Parameterized::class)
 class AGPCompatibilityTest(
-  private val agpVersion: String
+  private val agpVersion: String,
+  private val gradleVersion: String
 ) {
   @get:Rule val testProjectDir = TemporaryFolder()
 
@@ -75,18 +77,21 @@ class AGPCompatibilityTest(
       GradleRunner.create()
         .withProjectDir(testProjectDir.root)
         .withArguments(*args)
+        .withGradleVersion(gradleVersion)
         .forwardOutput()
     return gradleRunner.build()
   }
 
   companion object {
     @JvmStatic
-    @Parameterized.Parameters(name = "agpVersion = {0}")
+    @Parameterized.Parameters(name = "agpVersion = {0}, gradleVersion = {1}")
     fun parameters() =
       listOf(
-        arrayOf("7.2.0"),
-        arrayOf("7.1.0"),
-        arrayOf("7.0.0"),
+        // AGP 8.3 requires Gradle 8.4 and JDK 17.
+        arrayOf("8.3.0-alpha11", "8.4"),
+        arrayOf("7.2.0", "7.4.2"),
+        arrayOf("7.1.0", "7.4.2"),
+        arrayOf("7.0.0", "7.4.2"),
       )
   }
 }

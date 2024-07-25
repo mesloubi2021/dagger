@@ -22,7 +22,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 public final class MyModule_ProvideStringFactory implements Factory<String> {
   private final Provider<Integer> iProvider;

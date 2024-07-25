@@ -16,7 +16,7 @@
 
 package dagger.spi.model;
 
-import com.google.devtools.ksp.symbol.KSFunctionDeclaration;
+import com.google.devtools.ksp.symbol.KSDeclaration;
 import com.google.errorprone.annotations.DoNotMock;
 import javax.lang.model.element.ExecutableElement;
 
@@ -31,11 +31,12 @@ public abstract class DaggerExecutableElement {
   public abstract ExecutableElement javac();
 
   /**
-   * Returns the KSP representation for the executable element.
+   * Returns the KSP representation for the executable element. Can be either KSFunctionDeclaration
+   * or KSPropertyDeclaration.
    *
    * @throws IllegalStateException if the current backend isn't KSP.
    */
-  public abstract KSFunctionDeclaration ksp();
+  public abstract KSDeclaration ksp();
 
   /** Returns the backend used in this compilation. */
   public abstract DaggerProcessingEnv.Backend backend();

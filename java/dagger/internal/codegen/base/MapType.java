@@ -115,6 +115,13 @@ public abstract class MapType {
     return isMap(key.type().xprocessing());
   }
 
+  public static boolean isMapOfProvider(XType keyType) {
+    if (MapType.isMap(keyType)) {
+      return MapType.from(keyType).valuesAreTypeOf(TypeNames.PROVIDER);
+    }
+    return false;
+  }
+
   /**
    * Returns a {@link MapType} for {@code type}.
    *

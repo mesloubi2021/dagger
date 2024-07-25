@@ -25,21 +25,21 @@ import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.Preconditions;
 import dagger.internal.codegen.binding.BindingGraph;
+import dagger.internal.codegen.binding.ComponentDependencyProvisionBinding;
 import dagger.internal.codegen.binding.ComponentRequirement;
-import dagger.internal.codegen.binding.ProvisionBinding;
 import dagger.internal.codegen.compileroption.CompilerOptions;
 import dagger.internal.codegen.javapoet.Expression;
 
 /** A binding expression for component provision methods. */
 final class ComponentProvisionRequestRepresentation extends RequestRepresentation {
-  private final ProvisionBinding binding;
+  private final ComponentDependencyProvisionBinding binding;
   private final BindingGraph bindingGraph;
   private final ComponentRequirementExpressions componentRequirementExpressions;
   private final CompilerOptions compilerOptions;
 
   @AssistedInject
   ComponentProvisionRequestRepresentation(
-      @Assisted ProvisionBinding binding,
+      @Assisted ComponentDependencyProvisionBinding binding,
       BindingGraph bindingGraph,
       ComponentImplementation componentImplementation,
       ComponentRequirementExpressions componentRequirementExpressions,
@@ -72,7 +72,9 @@ final class ComponentProvisionRequestRepresentation extends RequestRepresentatio
   }
 
   static CodeBlock maybeCheckForNull(
-      ProvisionBinding binding, CompilerOptions compilerOptions, CodeBlock invocation) {
+      ComponentDependencyProvisionBinding binding,
+      CompilerOptions compilerOptions,
+      CodeBlock invocation) {
     return binding.shouldCheckForNull(compilerOptions)
         ? CodeBlock.of("$T.checkNotNullFromComponent($L)", Preconditions.class, invocation)
         : invocation;
@@ -80,6 +82,6 @@ final class ComponentProvisionRequestRepresentation extends RequestRepresentatio
 
   @AssistedFactory
   static interface Factory {
-    ComponentProvisionRequestRepresentation create(ProvisionBinding binding);
+    ComponentProvisionRequestRepresentation create(ComponentDependencyProvisionBinding binding);
   }
 }

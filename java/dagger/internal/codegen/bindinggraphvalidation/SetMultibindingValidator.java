@@ -30,6 +30,7 @@ import dagger.internal.codegen.model.BindingGraph;
 import dagger.internal.codegen.model.DiagnosticReporter;
 import dagger.internal.codegen.model.Key;
 import dagger.internal.codegen.validation.ValidationBindingGraphPlugin;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** Validates that there are not multiple set binding contributions to the same binding. */
@@ -59,7 +60,8 @@ final class SetMultibindingValidator extends ValidationBindingGraphPlugin {
     Multimap<Key, Binding> dereferencedBindsTargets = HashMultimap.create();
     for (Binding dep : bindingGraph.requestedBindings(binding)) {
       if (dep.kind().equals(DELEGATE)) {
-        dereferencedBindsTargets.put(dereferenceDelegateBinding(dep, bindingGraph), dep);
+        dereferenceDelegateBinding(dep, bindingGraph)
+            .ifPresent(dereferencedKey -> dereferencedBindsTargets.put(dereferencedKey, dep));
       }
     }
 
@@ -80,13 +82,19 @@ final class SetMultibindingValidator extends ValidationBindingGraphPlugin {
             });
   }
 
-  /** Returns the delegate target of a delegate binding (going through other delegates as well). */
-  private Key dereferenceDelegateBinding(Binding binding, BindingGraph bindingGraph) {
+  /**
+   * Returns the dereferenced key of a delegate binding (going through other delegates as well).
+   *
+   * <p>If the binding cannot be dereferenced (because it leads to a missing binding or duplicate
+   * bindings) then {@link Optional#empty()} is returned.
+   */
+  private Optional<Key> dereferenceDelegateBinding(Binding binding, BindingGraph bindingGraph) {
     ImmutableSet<Binding> delegateSet = bindingGraph.requestedBindings(binding);
-    if (delegateSet.isEmpty()) {
-      // There may not be a delegate if the delegate is missing. In this case, we just take the
-      // requested key and return that.
-      return Iterables.getOnlyElement(binding.dependencies()).key();
+    if (delegateSet.size() != 1) {
+      // If there isn't exactly 1 delegate then it means either a MissingBinding or DuplicateBinding
+      // error will be reported. Just return nothing rather than trying to dereference further, as
+      // anything we report here will just be noise on top of the other error anyway.
+      return Optional.empty();
     }
     // If there is a binding, first we check if that is a delegate binding so we can dereference
     // that binding if needed.
@@ -94,6 +102,6 @@ final class SetMultibindingValidator extends ValidationBindingGraphPlugin {
     if (delegate.kind().equals(DELEGATE)) {
       return dereferenceDelegateBinding(delegate, bindingGraph);
     }
-    return delegate.key();
+    return Optional.of(delegate.key());
   }
 }

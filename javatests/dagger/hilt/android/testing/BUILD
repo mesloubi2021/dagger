@@ -158,3 +158,37 @@ android_local_test(
         "//third_party/java/truth",
     ],
 )
+
+android_local_test(
+    name = "SkipTestInjectionTest",
+    srcs = ["SkipTestInjectionTest.java"],
+    manifest_values = {
+        "minSdkVersion": "15",
+        "targetSdkVersion": "27",
+    },
+    deps = [
+        "//:android_local_test_exports",
+        "//:dagger_with_compiler",
+        "//java/dagger/hilt/android/testing:hilt_android_test",
+        "//java/dagger/hilt/android/testing:skip_test_injection",
+        "//third_party/java/jsr330_inject",
+        "//third_party/java/truth",
+    ],
+)
+
+android_local_test(
+    name = "SkipTestInjectionAnnotationTest",
+    srcs = ["SkipTestInjectionAnnotationTest.java"],
+    manifest_values = {
+        "minSdkVersion": "15",
+        "targetSdkVersion": "27",
+    },
+    deps = [
+        "//:android_local_test_exports",
+        "//:dagger_with_compiler",
+        "//java/dagger/hilt/android/testing:hilt_android_test",
+        "//java/dagger/hilt/android/testing:skip_test_injection",
+        "//third_party/java/jsr330_inject",
+        "//third_party/java/truth",
+    ],
+)

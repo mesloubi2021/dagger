@@ -24,8 +24,9 @@ import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.BindingRequest;
+import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.binding.FrameworkType;
-import dagger.internal.codegen.binding.ProductionBinding;
+import dagger.internal.codegen.model.RequestKind;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -35,15 +36,15 @@ import java.util.Optional;
  * that binding.
  */
 final class ProductionBindingRepresentation implements BindingRepresentation {
-  private final ProductionBinding binding;
+  private final ContributionBinding binding;
   private final DerivedFromFrameworkInstanceRequestRepresentation.Factory
       derivedFromFrameworkInstanceRequestRepresentationFactory;
-  private final RequestRepresentation frameworkInstanceRequestRepresentation;
+  private final RequestRepresentation producerNodeInstanceRequestRepresentation;
   private final Map<BindingRequest, RequestRepresentation> requestRepresentations = new HashMap<>();
 
   @AssistedInject
   ProductionBindingRepresentation(
-      @Assisted ProductionBinding binding,
+      @Assisted ContributionBinding binding,
       ComponentImplementation componentImplementation,
       DerivedFromFrameworkInstanceRequestRepresentation.Factory
           derivedFromFrameworkInstanceRequestRepresentationFactory,
@@ -66,7 +67,7 @@ final class ProductionBindingRepresentation implements BindingRepresentation {
                     ? bindingRepresentations.scope(
                         binding, unscopedFrameworkInstanceCreationExpressionFactory.create(binding))
                     : unscopedFrameworkInstanceCreationExpressionFactory.create(binding));
-    this.frameworkInstanceRequestRepresentation =
+    this.producerNodeInstanceRequestRepresentation =
         producerNodeInstanceRequestRepresentationFactory.create(binding, frameworkInstanceSupplier);
   }
 
@@ -77,11 +78,11 @@ final class ProductionBindingRepresentation implements BindingRepresentation {
   }
 
   private RequestRepresentation getRequestRepresentationUncached(BindingRequest request) {
-    return request.frameworkType().isPresent()
-        ? frameworkInstanceRequestRepresentation
+    return request.requestKind().equals(RequestKind.PRODUCER)
+        ? producerNodeInstanceRequestRepresentation
         : derivedFromFrameworkInstanceRequestRepresentationFactory.create(
             binding,
-            frameworkInstanceRequestRepresentation,
+            producerNodeInstanceRequestRepresentation,
             request.requestKind(),
             FrameworkType.PRODUCER_NODE);
   }
@@ -104,6 +105,6 @@ final class ProductionBindingRepresentation implements BindingRepresentation {
 
   @AssistedFactory
   static interface Factory {
-    ProductionBindingRepresentation create(ProductionBinding binding);
+    ProductionBindingRepresentation create(ContributionBinding binding);
   }
 }

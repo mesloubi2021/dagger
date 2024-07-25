@@ -17,12 +17,13 @@
 package dagger.producers.internal;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static dagger.internal.Providers.asDaggerProvider;
 import static dagger.producers.internal.Producers.producerFromProvider;
 
 import com.google.common.collect.ImmutableMap;
+import dagger.internal.Provider;
 import dagger.producers.Producer;
 import java.util.Map;
-import javax.inject.Provider;
 
 /**
  * An {@code abstract} {@link Producer} implementation used to implement {@link Map} bindings.
@@ -74,6 +75,15 @@ abstract class AbstractMapProducer<K, V, V2> extends AbstractProducer<Map<K, V2>
       checkNotNull(providerOfValue, "provider of value");
       mapBuilder.put(key, producerFromProvider(providerOfValue));
       return this;
+    }
+
+    /**
+     * Legacy javax version of the method to support libraries compiled with an older version of
+     * Dagger. Do not use directly.
+     */
+    @Deprecated
+    Builder<K, V, V2> put(K key, javax.inject.Provider<V> providerOfValue) {
+      return put(key, asDaggerProvider(providerOfValue));
     }
 
     /** Adds contributions from a super-implementation of a component into this builder. */

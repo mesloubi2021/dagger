@@ -34,6 +34,7 @@ public class PropertyQualifierTest {
     assertThat(injectedClass.javaDataB).isNotNull();
     assertThat(injectedClass.javaWithTargetDataA).isNotNull();
     assertThat(injectedClass.kotlinDataA).isNotNull();
+    assertThat(injectedClass.getKotlinDataA2()).isNotNull();
     assertThat(injectedClass.dataWithConstructionInjection).isNotNull();
     assertThat(injectedClass.dataWithConstructionInjection.getData()).isNotNull();
   }

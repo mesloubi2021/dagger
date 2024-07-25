@@ -123,14 +123,18 @@ public final class GeneratorsTest {
                     JOINER.join(
                         "  Hilt_MyView(Context p0, @Nullable AttributeSet p1) {",
                         "    super(p0, p1);",
-                        "    inject();",
+                        "    if(!isInEditMode()) {",
+                        "      inject();",
+                        "    }",
                         "  }"));
               } else {
                 stringSubject.contains(
                     JOINER.join(
                         "  Hilt_MyView(Context context, @Nullable AttributeSet attrs) {",
                         "    super(context, attrs);",
-                        "    inject();",
+                        "    if(!isInEditMode()) {",
+                        "      inject();",
+                        "    }",
                         "  }"));
               }
             });

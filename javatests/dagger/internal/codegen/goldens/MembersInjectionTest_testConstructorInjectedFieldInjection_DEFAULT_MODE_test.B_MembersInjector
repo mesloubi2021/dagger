@@ -17,7 +17,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 public final class B_MembersInjector implements MembersInjector<B> {
   private final Provider<String> valueBProvider;

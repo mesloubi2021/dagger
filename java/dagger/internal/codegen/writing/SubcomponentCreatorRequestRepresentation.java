@@ -23,18 +23,19 @@ import com.squareup.javapoet.CodeBlock;
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
-import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.binding.SubcomponentCreatorBinding;
 import dagger.internal.codegen.javapoet.Expression;
 import dagger.internal.codegen.writing.ComponentImplementation.ShardImplementation;
 
 /** A binding expression for a subcomponent creator that just invokes the constructor. */
 final class SubcomponentCreatorRequestRepresentation extends RequestRepresentation {
   private final ShardImplementation shardImplementation;
-  private final ContributionBinding binding;
+  private final SubcomponentCreatorBinding binding;
 
   @AssistedInject
   SubcomponentCreatorRequestRepresentation(
-      @Assisted ContributionBinding binding, ComponentImplementation componentImplementation) {
+      @Assisted SubcomponentCreatorBinding binding,
+      ComponentImplementation componentImplementation) {
     this.binding = binding;
     this.shardImplementation = componentImplementation.shardImplementation(binding);
   }
@@ -58,6 +59,6 @@ final class SubcomponentCreatorRequestRepresentation extends RequestRepresentati
 
   @AssistedFactory
   static interface Factory {
-    SubcomponentCreatorRequestRepresentation create(ContributionBinding binding);
+    SubcomponentCreatorRequestRepresentation create(SubcomponentCreatorBinding binding);
   }
 }

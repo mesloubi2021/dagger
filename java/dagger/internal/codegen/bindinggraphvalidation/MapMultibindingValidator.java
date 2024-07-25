@@ -22,6 +22,7 @@ import static dagger.internal.codegen.base.Formatter.INDENT;
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSetMultimap;
 import static dagger.internal.codegen.model.BindingKind.MULTIBOUND_MAP;
+import static dagger.internal.codegen.xprocessing.XAnnotations.getClassName;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 import com.google.common.collect.ImmutableList;
@@ -42,6 +43,7 @@ import dagger.internal.codegen.model.BindingGraph;
 import dagger.internal.codegen.model.DiagnosticReporter;
 import dagger.internal.codegen.model.Key;
 import dagger.internal.codegen.validation.ValidationBindingGraphPlugin;
+import dagger.internal.codegen.xprocessing.XAnnotations;
 import java.util.Set;
 import javax.inject.Inject;
 
@@ -141,7 +143,11 @@ final class MapMultibindingValidator extends ValidationBindingGraphPlugin {
       ImmutableSet<ContributionBinding> contributions,
       DiagnosticReporter diagnosticReporter) {
     ImmutableSetMultimap<?, ContributionBinding> contributionsByMapKey =
-        ImmutableSetMultimap.copyOf(Multimaps.index(contributions, ContributionBinding::mapKey));
+        ImmutableSetMultimap.copyOf(
+            Multimaps.index(
+                contributions,
+                // Note: We're wrapping in XAnnotations.equivalence() to get proper equals/hashcode.
+                binding -> binding.mapKey().map(XAnnotations.equivalence()::wrap)));
 
     for (Set<ContributionBinding> contributionsForOneMapKey :
         Multimaps.asMap(contributionsByMapKey).values()) {
@@ -160,7 +166,7 @@ final class MapMultibindingValidator extends ValidationBindingGraphPlugin {
       DiagnosticReporter diagnosticReporter) {
     ImmutableSetMultimap<ClassName, ContributionBinding> contributionsByMapKeyAnnotationType =
         ImmutableSetMultimap.copyOf(
-            Multimaps.index(contributions, mapBinding -> mapBinding.mapKey().get().className()));
+            Multimaps.index(contributions, mapBinding -> getClassName(mapBinding.mapKey().get())));
 
     if (contributionsByMapKeyAnnotationType.keySet().size() > 1) {
       diagnosticReporter.reportBinding(

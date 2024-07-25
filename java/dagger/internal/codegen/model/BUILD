@@ -27,8 +27,6 @@ java_library(
         "//java/dagger:core",
         "//java/dagger/internal/codegen/extension",
         "//java/dagger/internal/codegen/xprocessing",
-        "//java/dagger/producers",
-        "//java/dagger/spi",
         "//third_party/java/auto:common",
         "//third_party/java/auto:value",
         "//third_party/java/guava/base",

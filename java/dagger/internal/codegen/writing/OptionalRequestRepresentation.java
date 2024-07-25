@@ -30,19 +30,20 @@ import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.base.OptionalType;
 import dagger.internal.codegen.base.OptionalType.OptionalKind;
-import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.binding.OptionalBinding;
 import dagger.internal.codegen.javapoet.Expression;
 import dagger.internal.codegen.model.DependencyRequest;
+import dagger.internal.codegen.model.RequestKind;
 
 /** A binding expression for optional bindings. */
 final class OptionalRequestRepresentation extends RequestRepresentation {
-  private final ProvisionBinding binding;
+  private final OptionalBinding binding;
   private final ComponentRequestRepresentations componentRequestRepresentations;
   private final XProcessingEnv processingEnv;
 
   @AssistedInject
   OptionalRequestRepresentation(
-      @Assisted ProvisionBinding binding,
+      @Assisted OptionalBinding binding,
       ComponentImplementation componentImplementation,
       ComponentRequestRepresentations componentRequestRepresentations,
       XProcessingEnv processingEnv) {
@@ -79,8 +80,11 @@ final class OptionalRequestRepresentation extends RequestRepresentation {
             .getDependencyExpression(bindingRequest(dependency), requestingClass)
             .codeBlock();
 
-    return isTypeAccessibleFrom(
-            dependency.key().type().xprocessing(), requestingClass.packageName())
+    boolean needsObjectExpression = !isTypeAccessibleFrom(
+        dependency.key().type().xprocessing(), requestingClass.packageName())
+        || (isPreJava8SourceVersion(processingEnv) && dependency.kind() == RequestKind.PROVIDER);
+
+    return !needsObjectExpression
         ? Expression.create(
             binding.key().type().xprocessing(),
             optionalKind.presentExpression(dependencyExpression))
@@ -95,6 +99,6 @@ final class OptionalRequestRepresentation extends RequestRepresentation {
 
   @AssistedFactory
   static interface Factory {
-    OptionalRequestRepresentation create(ProvisionBinding binding);
+    OptionalRequestRepresentation create(OptionalBinding binding);
   }
 }

@@ -38,7 +38,6 @@ import dagger.hilt.android.plugin.util.getKaptConfigName
 import dagger.hilt.android.plugin.util.getKspConfigName
 import dagger.hilt.android.plugin.util.isKspTask
 import dagger.hilt.processor.internal.optionvalues.GradleProjectType
-import java.io.File
 import javax.inject.Inject
 import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
@@ -246,12 +245,9 @@ class HiltGradlePlugin @Inject constructor(
     fun registerTransform(androidComponent: ComponentCompat) {
       androidComponent.transformClassesWith(
         classVisitorFactoryImplClass = AndroidEntryPointClassVisitor.Factory::class.java,
-        scope = InstrumentationScope.PROJECT
-      ) { params ->
-        val classesDir =
-          File(project.buildDir, "intermediates/javac/${androidComponent.name}/classes")
-        params.additionalClassesDir.set(classesDir)
-      }
+        scope = InstrumentationScope.PROJECT,
+        instrumentationParamsConfig = {}
+      )
       androidComponent.setAsmFramesComputationMode(
         FramesComputationMode.COMPUTE_FRAMES_FOR_INSTRUMENTED_METHODS
       )

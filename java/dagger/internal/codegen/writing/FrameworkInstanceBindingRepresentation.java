@@ -26,15 +26,16 @@ import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.BindingGraph;
 import dagger.internal.codegen.binding.BindingRequest;
+import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.binding.DelegateBinding;
 import dagger.internal.codegen.binding.FrameworkType;
-import dagger.internal.codegen.binding.ProvisionBinding;
 import dagger.internal.codegen.model.RequestKind;
 import java.util.HashMap;
 import java.util.Map;
 
 /** Returns request representation that wraps a framework instance expression */
 final class FrameworkInstanceBindingRepresentation {
-  private final ProvisionBinding binding;
+  private final ContributionBinding binding;
   private final DerivedFromFrameworkInstanceRequestRepresentation.Factory
       derivedFromFrameworkInstanceRequestRepresentationFactory;
   private final ImmediateFutureRequestRepresentation.Factory
@@ -45,7 +46,7 @@ final class FrameworkInstanceBindingRepresentation {
 
   @AssistedInject
   FrameworkInstanceBindingRepresentation(
-      @Assisted ProvisionBinding binding,
+      @Assisted ContributionBinding binding,
       BindingGraph graph,
       ComponentImplementation componentImplementation,
       DelegateRequestRepresentation.Factory delegateRequestRepresentationFactory,
@@ -63,7 +64,8 @@ final class FrameworkInstanceBindingRepresentation {
     this.immediateFutureRequestRepresentationFactory = immediateFutureRequestRepresentationFactory;
     this.providerRequestRepresentation =
         binding.kind().equals(DELEGATE) && !needsCaching(binding, graph)
-            ? delegateRequestRepresentationFactory.create(binding, RequestKind.PROVIDER)
+            ? delegateRequestRepresentationFactory.create(
+                (DelegateBinding) binding, RequestKind.PROVIDER)
             : providerInstanceRequestRepresentationFactory.create(binding);
     this.producerFromProviderRepresentation =
         producerNodeInstanceRequestRepresentationFactory.create(
@@ -107,6 +109,6 @@ final class FrameworkInstanceBindingRepresentation {
 
   @AssistedFactory
   static interface Factory {
-    FrameworkInstanceBindingRepresentation create(ProvisionBinding binding);
+    FrameworkInstanceBindingRepresentation create(ContributionBinding binding);
   }
 }

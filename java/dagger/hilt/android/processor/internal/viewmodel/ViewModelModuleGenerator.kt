@@ -42,18 +42,20 @@ import javax.lang.model.element.Modifier
  *   public static abstract class BindsModule {
  *     @Binds
  *     @IntoMap
- *     @StringKey("pkg.$")
+ *     @LazyClassKey(pkg.$)
  *     @HiltViewModelMap
  *     public abstract ViewModel bind($ vm)
  *   }
  *   @Module
  *   @InstallIn(ActivityRetainedComponent.class)
  *   public static final class KeyModule {
+ *     private static String className = "pkg.$";
  *     @Provides
- *     @IntoSet
+ *     @IntoMap
  *     @HiltViewModelMap.KeySet
- *     public static String provide() {
- *      return "pkg.$";
+ *     @LazyClassKey(pkg.$)
+ *     public static boolean provide() {
+ *       return true;
  *     }
  *   }
  * }
@@ -62,7 +64,7 @@ import javax.lang.model.element.Modifier
 @OptIn(ExperimentalProcessingApi::class)
 internal class ViewModelModuleGenerator(
   private val processingEnv: XProcessingEnv,
-  private val viewModelMetadata: ViewModelMetadata
+  private val viewModelMetadata: ViewModelMetadata,
 ) {
   fun generate() {
     val modulesTypeSpec =
@@ -75,7 +77,7 @@ internal class ViewModelModuleGenerator(
               .addMember(
                 "topLevelClass",
                 "$T.class",
-                viewModelMetadata.className.topLevelClassName()
+                viewModelMetadata.className.topLevelClassName(),
               )
               .build()
           )
@@ -94,7 +96,7 @@ internal class ViewModelModuleGenerator(
   private fun getBindsModuleTypeSpec() =
     createModuleTypeSpec(
         className = "BindsModule",
-        component = AndroidClassNames.VIEW_MODEL_COMPONENT
+        component = AndroidClassNames.VIEW_MODEL_COMPONENT,
       )
       .addModifiers(Modifier.ABSTRACT)
       .addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build())
@@ -112,8 +114,8 @@ internal class ViewModelModuleGenerator(
       .addAnnotation(ClassNames.BINDS)
       .addAnnotation(ClassNames.INTO_MAP)
       .addAnnotation(
-        AnnotationSpec.builder(ClassNames.STRING_KEY)
-          .addMember("value", S, viewModelMetadata.className.reflectionName())
+        AnnotationSpec.builder(ClassNames.LAZY_CLASS_KEY)
+          .addMember("value", "$T.class", viewModelMetadata.className)
           .build()
       )
       .addAnnotation(AndroidClassNames.HILT_VIEW_MODEL_MAP_QUALIFIER)
@@ -125,7 +127,7 @@ internal class ViewModelModuleGenerator(
   private fun getKeyModuleTypeSpec() =
     createModuleTypeSpec(
         className = "KeyModule",
-        component = AndroidClassNames.ACTIVITY_RETAINED_COMPONENT
+        component = AndroidClassNames.ACTIVITY_RETAINED_COMPONENT,
       )
       .addModifiers(Modifier.FINAL)
       .addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build())
@@ -135,11 +137,16 @@ internal class ViewModelModuleGenerator(
   private fun getViewModelKeyProvidesMethod() =
     MethodSpec.methodBuilder("provide")
       .addAnnotation(ClassNames.PROVIDES)
-      .addAnnotation(ClassNames.INTO_SET)
+      .addAnnotation(ClassNames.INTO_MAP)
+      .addAnnotation(
+        AnnotationSpec.builder(ClassNames.LAZY_CLASS_KEY)
+          .addMember("value", "$T.class", viewModelMetadata.className)
+          .build()
+      )
       .addAnnotation(AndroidClassNames.HILT_VIEW_MODEL_KEYS_QUALIFIER)
       .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
-      .returns(String::class.java)
-      .addStatement("return $S", viewModelMetadata.className.reflectionName())
+      .returns(Boolean::class.java)
+      .addStatement("return true")
       .build()
 
   /**
@@ -147,7 +154,7 @@ internal class ViewModelModuleGenerator(
    * ```
    * @Binds
    * @IntoMap
-   * @StringKey("pkg.FooViewModel")
+   * @LazyClassKey(pkg.FooViewModel.class)
    * @HiltViewModelAssistedMap
    * public abstract Object bind(FooViewModelAssistedFactory factory);
    * ```
@@ -160,8 +167,8 @@ internal class ViewModelModuleGenerator(
       .addAnnotation(ClassNames.BINDS)
       .addAnnotation(ClassNames.INTO_MAP)
       .addAnnotation(
-        AnnotationSpec.builder(ClassNames.STRING_KEY)
-          .addMember("value", S, viewModelMetadata.className.reflectionName())
+        AnnotationSpec.builder(ClassNames.LAZY_CLASS_KEY)
+          .addMember("value", "$T.class", viewModelMetadata.className)
           .build()
       )
       .addAnnotation(AndroidClassNames.HILT_VIEW_MODEL_ASSISTED_FACTORY_MAP_QUALIFIER)

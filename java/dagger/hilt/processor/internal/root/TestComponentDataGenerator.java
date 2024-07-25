@@ -25,6 +25,7 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
 import androidx.room.compiler.processing.JavaPoetExtKt;
+import androidx.room.compiler.processing.XAnnotation;
 import androidx.room.compiler.processing.XConstructorElement;
 import androidx.room.compiler.processing.XFiler.Mode;
 import androidx.room.compiler.processing.XProcessingEnv;
@@ -41,6 +42,7 @@ import dagger.hilt.processor.internal.ComponentNames;
 import dagger.hilt.processor.internal.Processors;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 /** Generates an implementation of {@link dagger.hilt.android.internal.TestComponentData}. */
 public final class TestComponentDataGenerator {
@@ -222,6 +224,13 @@ public final class TestComponentDataGenerator {
   }
 
   private CodeBlock callInjectTest(XTypeElement testElement) {
+    Optional<XAnnotation> skipTestInjection =
+        rootMetadata.testRootMetadata().skipTestInjectionAnnotation();
+    if (skipTestInjection.isPresent()) {
+      return CodeBlock.of(
+          "throw new IllegalStateException(\"Cannot inject test when using @$L\")",
+          skipTestInjection.get().getName());
+    }
     return CodeBlock.of(
         "(($T) (($T) $T.getApplication($T.getApplicationContext()))"
             + ".generatedComponent()).injectTest(testInstance)",

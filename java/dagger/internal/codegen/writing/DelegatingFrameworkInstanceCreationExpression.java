@@ -24,7 +24,7 @@ import com.squareup.javapoet.CodeBlock;
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
-import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.binding.DelegateBinding;
 import dagger.internal.codegen.compileroption.CompilerOptions;
 import dagger.internal.codegen.javapoet.CodeBlocks;
 import dagger.internal.codegen.model.DependencyRequest;
@@ -34,13 +34,13 @@ import dagger.internal.codegen.writing.FrameworkFieldInitializer.FrameworkInstan
 final class DelegatingFrameworkInstanceCreationExpression
     implements FrameworkInstanceCreationExpression {
 
-  private final ContributionBinding binding;
+  private final DelegateBinding binding;
   private final ComponentImplementation componentImplementation;
   private final ComponentRequestRepresentations componentRequestRepresentations;
 
   @AssistedInject
   DelegatingFrameworkInstanceCreationExpression(
-      @Assisted ContributionBinding binding,
+      @Assisted DelegateBinding binding,
       ComponentImplementation componentImplementation,
       ComponentRequestRepresentations componentRequestRepresentations,
       CompilerOptions compilerOptions) {
@@ -63,6 +63,6 @@ final class DelegatingFrameworkInstanceCreationExpression
 
   @AssistedFactory
   static interface Factory {
-    DelegatingFrameworkInstanceCreationExpression create(ContributionBinding binding);
+    DelegatingFrameworkInstanceCreationExpression create(DelegateBinding binding);
   }
 }

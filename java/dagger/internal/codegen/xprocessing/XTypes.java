@@ -250,7 +250,11 @@ public final class XTypes {
       case JAVAC:
         return isDeclared(type)
             && type.getTypeArguments().isEmpty()
-            && !type.getTypeElement().getType().getTypeArguments().isEmpty();
+            // TODO(b/353979671): We previously called:
+            //     type.getTypeElement().getType().getTypeArguments().isEmpty()
+            // which is a bit more symmetric to the call above, but that resulted in b/353979671, so
+            // we've switched to checking `XTypeElement#getTypeParameters()` until the bug is fixed.
+            && !type.getTypeElement().getTypeParameters().isEmpty();
       case KSP:
         return isDeclared(type)
             // TODO(b/245619245): Due to the bug in XProcessing, the logic used for Javac won't work
@@ -388,12 +392,46 @@ public final class XTypes {
    * {@link Optional} is returned if there is no non-{@link Object} superclass.
    */
   public static Optional<XType> nonObjectSuperclass(XType type) {
-    return isDeclared(type)
-        ? type.getSuperTypes().stream()
-            .filter(supertype -> !supertype.getTypeName().equals(TypeName.OBJECT))
-            .filter(supertype -> isDeclared(supertype) && supertype.getTypeElement().isClass())
-            .collect(toOptional())
-        : Optional.empty();
+    if (!isDeclared(type)) {
+      return Optional.empty();
+    }
+    // We compare elements (rather than TypeName) here because its more efficient on the heap.
+    XTypeElement objectElement = objectElement(getProcessingEnv(type));
+    XTypeElement typeElement = type.getTypeElement();
+    if (!typeElement.isClass() || typeElement.equals(objectElement)) {
+      return Optional.empty();
+    }
+    XType superClass = typeElement.getSuperClass();
+    if (!isDeclared(superClass)) {
+      return Optional.empty();
+    }
+    XTypeElement superClassElement = superClass.getTypeElement();
+    if (!superClassElement.isClass() || superClassElement.equals(objectElement)) {
+      return Optional.empty();
+    }
+    // TODO(b/310954522): XType#getSuperTypes() is less efficient (especially on the heap) as it
+    // requires creating XType for not just superclass but all super interfaces as well, so we go
+    // through a bit of effort here to avoid that call unless its absolutely necessary since
+    // nonObjectSuperclass is called quite a bit via InjectionSiteFactory. However, we should
+    // eventually optimize this on the XProcessing side instead, e.g. maybe separating
+    // XType#getSuperClass() into a separate method.
+    return superClass.getTypeArguments().isEmpty()
+        ? Optional.of(superClass)
+        : type.getSuperTypes().stream()
+            .filter(XTypes::isDeclared)
+            .filter(supertype -> supertype.getTypeElement().isClass())
+            .filter(supertype -> !supertype.getTypeElement().equals(objectElement))
+            .collect(toOptional());
+  }
+
+  private static XTypeElement objectElement(XProcessingEnv processingEnv) {
+    switch (processingEnv.getBackend()) {
+      case JAVAC:
+        return processingEnv.requireTypeElement(TypeName.OBJECT);
+      case KSP:
+        return processingEnv.requireTypeElement("kotlin.Any");
+    }
+    throw new AssertionError("Unexpected backend: " + processingEnv.getBackend());
   }
 
   /**

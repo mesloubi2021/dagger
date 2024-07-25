@@ -20,6 +20,8 @@ import com.android.build.api.instrumentation.AsmClassVisitorFactory
 import com.android.build.api.instrumentation.FramesComputationMode
 import com.android.build.api.instrumentation.InstrumentationParameters
 import com.android.build.api.instrumentation.InstrumentationScope
+import java.io.File
+import org.gradle.api.Project
 
 /**
  * Compatibility version of [com.android.build.api.variant.Component]

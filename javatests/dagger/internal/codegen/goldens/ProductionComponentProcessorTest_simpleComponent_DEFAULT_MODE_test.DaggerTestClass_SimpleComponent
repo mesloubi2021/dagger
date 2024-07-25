@@ -5,6 +5,7 @@ import dagger.internal.DaggerGenerated;
 import dagger.internal.DoubleCheck;
 import dagger.internal.InstanceFactory;
 import dagger.internal.Preconditions;
+import dagger.internal.Provider;
 import dagger.internal.SetFactory;
 import dagger.producers.Producer;
 import dagger.producers.internal.CancellationListener;
@@ -12,7 +13,6 @@ import dagger.producers.internal.Producers;
 import dagger.producers.monitoring.ProductionComponentMonitor;
 import java.util.concurrent.Executor;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -23,7 +23,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestClass_SimpleComponent {
   private DaggerTestClass_SimpleComponent() {

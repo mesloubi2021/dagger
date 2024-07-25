@@ -15,12 +15,12 @@
 # Description:
 #   Tests for the Dagger SPI
 
-load("//:test_defs.bzl", "GenJavaTests")
 load(
     "//:build_defs.bzl",
     "DOCLINT_HTML_AND_SYNTAX",
     "DOCLINT_REFERENCES",
 )
+load("//:test_defs.bzl", "GenJavaTests")
 
 package(default_visibility = ["//:src"])
 

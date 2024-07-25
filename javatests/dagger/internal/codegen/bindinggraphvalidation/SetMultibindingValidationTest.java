@@ -95,6 +95,85 @@ public class SetMultibindingValidationTest {
             });
   }
 
+  // Regression test for b/316582741 to ensure the duplicate binding gets reported rather than
+  // causing a crash.
+  @Test public void testSetBindingsToDuplicateBinding() {
+    Source module =
+        CompilerTests.javaSource(
+            "test.TestModule",
+            "package test;",
+            "",
+            "import dagger.Binds;",
+            "import dagger.Module;",
+            "import dagger.Provides;",
+            "import dagger.multibindings.IntoSet;",
+            "",
+            "@Module",
+            "interface TestModule {",
+            "  @Binds @IntoSet Foo bindFoo(FooImpl impl);",
+            "",
+            "  @Provides static FooImpl provideFooImpl() { return null; }",
+            "",
+            "  @Provides static FooImpl provideFooImplAgain() { return null; }",
+            "}");
+    Source component =
+        CompilerTests.javaSource(
+            "test.TestComponent",
+            "package test;",
+            "",
+            "import dagger.Component;",
+            "import java.util.Set;",
+            "",
+            "@Component(modules = TestModule.class)",
+            "interface TestComponent {",
+            "  Set<Foo> setOfFoo();",
+            "}");
+    CompilerTests.daggerCompiler(FOO, FOO_IMPL, module, component)
+        .withProcessingOptions(compilerMode.processorOptions())
+        .compile(
+            subject -> {
+              subject.hasErrorCount(1);
+              subject.hasErrorContaining("FooImpl is bound multiple times");
+            });
+  }
+
+  @Test public void testSetBindingsToMissingBinding() {
+    Source module =
+        CompilerTests.javaSource(
+            "test.TestModule",
+            "package test;",
+            "",
+            "import dagger.Binds;",
+            "import dagger.Module;",
+            "import dagger.multibindings.IntoSet;",
+            "",
+            "@Module",
+            "interface TestModule {",
+            "  @Binds @IntoSet Foo bindFoo(MissingFooImpl impl);",
+            "",
+            "  static class MissingFooImpl implements Foo {}",
+            "}");
+    Source component =
+        CompilerTests.javaSource(
+            "test.TestComponent",
+            "package test;",
+            "",
+            "import dagger.Component;",
+            "import java.util.Set;",
+            "",
+            "@Component(modules = TestModule.class)",
+            "interface TestComponent {",
+            "  Set<Foo> setOfFoo();",
+            "}");
+    CompilerTests.daggerCompiler(FOO, module, component)
+        .withProcessingOptions(compilerMode.processorOptions())
+        .compile(
+            subject -> {
+              subject.hasErrorCount(1);
+              subject.hasErrorContaining("MissingFooImpl cannot be provided");
+            });
+  }
+
   @Test public void testMultipleSetBindingsToSameFooThroughMultipleBinds() {
     Source module =
         CompilerTests.javaSource(

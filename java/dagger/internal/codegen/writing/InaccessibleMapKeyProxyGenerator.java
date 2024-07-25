@@ -26,10 +26,12 @@ import androidx.room.compiler.processing.XElement;
 import androidx.room.compiler.processing.XFiler;
 import androidx.room.compiler.processing.XProcessingEnv;
 import com.google.common.collect.ImmutableList;
+import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.TypeSpec;
 import dagger.internal.codegen.base.SourceFileGenerator;
 import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.binding.MapKeys;
+import dagger.internal.codegen.javapoet.TypeNames;
 import javax.inject.Inject;
 
 /**
@@ -56,11 +58,30 @@ public final class InaccessibleMapKeyProxyGenerator
   public ImmutableList<TypeSpec.Builder> topLevelTypes(ContributionBinding binding) {
     return MapKeys.mapKeyFactoryMethod(binding, processingEnv)
         .map(
-            method ->
-                classBuilder(MapKeys.mapKeyProxyClassName(binding))
-                    .addModifiers(PUBLIC, FINAL)
-                    .addMethod(constructorBuilder().addModifiers(PRIVATE).build())
-                    .addMethod(method))
+            method -> {
+              TypeSpec.Builder builder =
+                  classBuilder(MapKeys.mapKeyProxyClassName(binding))
+                      .addModifiers(PUBLIC, FINAL)
+                      .addMethod(constructorBuilder().addModifiers(PRIVATE).build())
+                      .addMethod(method);
+              // In proguard, we need to keep the classes referenced by @LazyClassKey, we do that by
+              // generating a field referencing the type, and then applying @KeepFieldType to the
+              // field. Here, we generate the field in the proxy class. For classes that are
+              // accessible from the dagger component, we generate fields in LazyClassKeyProvider.
+              // Note: the generated field should not be initialized to avoid class loading.
+              binding
+                  .mapKey()
+                  .filter(
+                      mapKey ->
+                          mapKey.getTypeElement().getClassName().equals(TypeNames.LAZY_CLASS_KEY))
+                  .map(
+                      mapKey ->
+                          FieldSpec.builder(mapKey.getAsType("value").getTypeName(), "className")
+                              .addAnnotation(TypeNames.KEEP_FIELD_TYPE)
+                              .build())
+                  .ifPresent(builder::addField);
+              return builder;
+            })
         .map(ImmutableList::of)
         .orElse(ImmutableList.of());
   }

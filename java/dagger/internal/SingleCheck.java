@@ -17,8 +17,7 @@
 package dagger.internal;
 
 import static dagger.internal.Preconditions.checkNotNull;
-
-import javax.inject.Provider;
+import static dagger.internal.Providers.asDaggerProvider;
 
 /**
  * A {@link Provider} implementation that memoizes the result of another {@link Provider} using
@@ -58,7 +57,7 @@ public final class SingleCheck<T> implements Provider<T> {
   }
 
   /** Returns a {@link Provider} that caches the value from the given delegate provider. */
-  // This method is declared this way instead of "<T> Provider<T> provider(Provider<T> provider)" 
+  // This method is declared this way instead of "<T> Provider<T> provider(Provider<T> provider)"
   // to work around an Eclipse type inference bug: https://github.com/google/dagger/issues/949.
   public static <P extends Provider<T>, T> Provider<T> provider(P provider) {
     // If a scoped @Binds delegates to a scoped binding, don't cache the value again.
@@ -66,5 +65,14 @@ public final class SingleCheck<T> implements Provider<T> {
       return provider;
     }
     return new SingleCheck<T>(checkNotNull(provider));
+  }
+
+  /**
+   * Legacy javax version of the method to support libraries compiled with an older version of
+   * Dagger. Do not use directly.
+   */
+  public static <P extends javax.inject.Provider<T>, T> javax.inject.Provider<T> provider(
+      P delegate) {
+    return provider(asDaggerProvider(delegate));
   }
 }

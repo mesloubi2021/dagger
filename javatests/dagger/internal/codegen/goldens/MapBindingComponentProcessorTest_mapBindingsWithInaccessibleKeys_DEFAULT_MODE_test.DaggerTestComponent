@@ -3,9 +3,9 @@ package test;
 import com.google.common.collect.ImmutableMap;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.MapFactory;
+import dagger.internal.Provider;
 import java.util.Map;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 import mapkeys.MapKeys;
 import mapkeys.MapModule;
 import mapkeys.MapModule_ClassKeyFactory;
@@ -28,7 +28,9 @@ import mapkeys.MapModule_EnumKeyMapKey;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -84,7 +86,7 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<Map<Class<?>, Integer>> classKeyProvider() {
+    public javax.inject.Provider<Map<Class<?>, Integer>> classKeyProvider() {
       return mapOfClassOfAndIntegerProvider;
     }
 
@@ -94,7 +96,7 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<Object> inaccessibleEnumProvider() {
+    public javax.inject.Provider<Object> inaccessibleEnumProvider() {
       return mapOfPackagePrivateEnumAndIntegerProvider;
     }
 
@@ -104,7 +106,7 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<Map<MapKeys.ComplexKey, Integer>> complexKeyProvider() {
+    public javax.inject.Provider<Map<MapKeys.ComplexKey, Integer>> complexKeyProvider() {
       return mapOfComplexKeyAndIntegerProvider;
     }
   }

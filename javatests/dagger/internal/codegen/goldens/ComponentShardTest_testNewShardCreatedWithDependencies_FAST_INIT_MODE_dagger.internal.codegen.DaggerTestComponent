@@ -3,8 +3,8 @@ package dagger.internal.codegen;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.DoubleCheck;
 import dagger.internal.Preconditions;
+import dagger.internal.Provider;
 import javax.annotation.processing.Generated;
-import javax.inject.Provider;
 
 @DaggerGenerated
 @Generated(
@@ -15,7 +15,9 @@ import javax.inject.Provider;
     "unchecked",
     "rawtypes",
     "KotlinInternal",
-    "KotlinInternalInJava"
+    "KotlinInternalInJava",
+    "cast",
+    "deprecation"
 })
 final class DaggerTestComponent {
   private DaggerTestComponent() {
@@ -81,17 +83,17 @@ final class DaggerTestComponent {
     }
 
     @Override
-    public Provider<Binding1> providerBinding1() {
+    public javax.inject.Provider<Binding1> providerBinding1() {
       return binding1Provider;
     }
 
     @Override
-    public Provider<Binding2> providerBinding2() {
+    public javax.inject.Provider<Binding2> providerBinding2() {
       return binding2Provider;
     }
 
     @Override
-    public Provider<Binding3> providerBinding3() {
+    public javax.inject.Provider<Binding3> providerBinding3() {
       return testComponentImpl.testComponentImplShard.binding3Provider;
     }
 

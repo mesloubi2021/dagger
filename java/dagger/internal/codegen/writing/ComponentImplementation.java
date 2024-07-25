@@ -42,6 +42,7 @@ import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
+import androidx.room.compiler.processing.JavaPoetExtKt;
 import androidx.room.compiler.processing.XExecutableParameterElement;
 import androidx.room.compiler.processing.XMessager;
 import androidx.room.compiler.processing.XMethodElement;
@@ -80,6 +81,7 @@ import dagger.internal.codegen.binding.ComponentDescriptor.ComponentMethodDescri
 import dagger.internal.codegen.binding.ComponentRequirement;
 import dagger.internal.codegen.binding.KeyVariableNamer;
 import dagger.internal.codegen.binding.MethodSignature;
+import dagger.internal.codegen.binding.ModuleDescriptor;
 import dagger.internal.codegen.compileroption.CompilerOptions;
 import dagger.internal.codegen.javapoet.CodeBlocks;
 import dagger.internal.codegen.javapoet.TypeNames;
@@ -244,8 +246,12 @@ public final class ComponentImplementation {
   /**
    * How many statements per {@code initialize()} or {@code onProducerFutureCancelled()} method
    * before they get partitioned.
+   *
+   * <p>This value has been set based on empirical performance analysis. If this number is too
+   * large, some Android runtimes will not ahead-of-time compile the generated code. See
+   * b/316617683.
    */
-  private static final int STATEMENTS_PER_METHOD = 100;
+  private static final int STATEMENTS_PER_METHOD = 25;
 
   private final ShardImplementation componentShard;
   private final Supplier<ImmutableMap<Binding, ShardImplementation>> shardsByBinding;
@@ -456,6 +462,7 @@ public final class ComponentImplementation {
     private final UniqueNameSet assistedParamNames = new UniqueNameSet();
     private final List<CodeBlock> initializations = new ArrayList<>();
     private final SwitchingProviders switchingProviders;
+    private final LazyClassKeyProviders lazyClassKeyProviders;
     private final Map<Key, CodeBlock> cancellations = new LinkedHashMap<>();
     private final Map<XVariableElement, String> uniqueAssistedName = new LinkedHashMap<>();
     private final List<CodeBlock> componentRequirementInitializations = new ArrayList<>();
@@ -472,7 +479,7 @@ public final class ComponentImplementation {
     private ShardImplementation(ClassName name) {
       this.name = name;
       this.switchingProviders = new SwitchingProviders(this, processingEnv);
-
+      this.lazyClassKeyProviders = new LazyClassKeyProviders(this);
       if (graph.componentDescriptor().isProduction()) {
         claimMethodName(CANCELLATION_LISTENER_METHOD_NAME);
       }
@@ -504,6 +511,10 @@ public final class ComponentImplementation {
     /** Returns the {@link SwitchingProviders} class for this shard. */
     public SwitchingProviders getSwitchingProviders() {
       return switchingProviders;
+    }
+
+    public LazyClassKeyProviders getLazyClassKeyProviders() {
+      return lazyClassKeyProviders;
     }
 
     /** Returns the {@link ComponentImplementation} that owns this shard. */
@@ -700,6 +711,15 @@ public final class ComponentImplementation {
     @Override
     public TypeSpec generate() {
       TypeSpec.Builder builder = classBuilder(name);
+
+      // Ksp requires explicitly associating input classes that are generated with the output class,
+      // otherwise, the cached generated classes won't be discoverable in an incremental build.
+      if (processingEnv.getBackend() == XProcessingEnv.Backend.KSP) {
+        graph.componentDescriptor().modules().stream()
+            .filter(ModuleDescriptor::isImplicitlyIncluded)
+            .forEach(
+                module -> JavaPoetExtKt.addOriginatingElement(builder, module.moduleElement()));
+      }
 
       if (isComponentShard()) {
         TypeSpecs.addSupertype(builder, graph.componentTypeElement());
